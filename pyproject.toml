@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rageval"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+  "arxiv", "pymupdf", "pdfplumber",
+  "langchain", "langchain-community", "langchain-openai",
+  "chromadb", "sentence-transformers", "rank-bm25",
+  "openai", "ragas", "mlflow",
+  "pandas", "numpy", "matplotlib", "pyyaml",
+  "python-dotenv", "tqdm", "pydantic>=2",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "ruff", "ipykernel"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
