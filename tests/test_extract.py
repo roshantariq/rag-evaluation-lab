@@ -12,6 +12,7 @@ from rageval.ingest.extract import (
     score_quality,
     split_sections,
     strip_references,
+    strip_encoded_blobs,
 )
 
 PAGE_WIDTH = 595.0
@@ -175,3 +176,38 @@ class TestQualityScoring:
     def test_equation_soup_is_degraded(self):
         eq = "where x t = f ( W h t - 1 + b ) and = 0 . 5 , [ 0 , 1 ] . " * 200
         assert classify(score_quality(eq, 8), 6) == "degraded"
+
+class TestEncodedBlobs:
+    BLOB = '1_base64="k7S9hMrk67oWzTDFSMw89rgny8=">AB7HicbVBNTwIxEJ3FL8Qv1KOX'
+
+    def test_base64_image_data_is_removed(self):
+        out = strip_encoded_blobs(f"See Figure 3 {self.BLOB} for details.")
+        assert "base64" not in out
+        assert out == "See Figure 3 for details."
+
+    def test_png_header_is_removed(self):
+        png = "iVBORw0KGgoAAAANSUhEUgAAASwAAAEsCAYAAAB5fY51AAAACXBIWXMAAA7EAAAOxAGVKw4b"
+        assert strip_encoded_blobs(f"x {png} y") == "x y"
+
+    def test_long_legitimate_tokens_survive(self):
+        # Vowel frequency cannot separate these from base64; case-flip rate can.
+        for token in (
+            "https://doi.org/10.48550/arXiv.2304.02948",
+            "https://www.ecmwf.int/en/forecasts/datasets/set-i",
+            "ConvLSTMEncoderDecoderForecastingNetwork",
+            "ERA5_reanalysis_500hPa_geopotential_1979_2018_daily",
+            "Latitude-weighted-Root-Mean-Square-Error",
+        ):
+            assert strip_encoded_blobs(token) == token
+
+    def test_line_structure_is_preserved(self):
+        # Regression guard: collapsing newlines here would re-introduce the
+        # bug that made every paper report a single section.
+        assert "\n" in strip_encoded_blobs("1 Introduction\nBody text here.")
+        assert strip_encoded_blobs(f"A\n{self.BLOB}\nB").count("\n") == 2
+
+    def test_urls_with_random_looking_paths_survive(self):
+        # Found in the corpus: a Google Forms link in FuXi (2306.12873v3) was
+        # deleted because its random ID cleared both heuristics.
+        url = "google.com/forms/d/e/1FAIpQLSfjwZLf6PmxRvRhIPMQ1WRLJ98iLxOq"
+        assert strip_encoded_blobs(url) == url

@@ -1,0 +1,15 @@
+# The deliberately unoptimised baseline. Every ablation is measured
+# against this, so it changes only when the baseline itself is redefined.
+chunking:
+  strategy: fixed_512
+  target_tokens: 512
+  overlap_tokens: 0
+
+embedding:
+  model: sentence-transformers/all-MiniLM-L6-v2
+
+index:
+  collection: baseline_fixed512_minilm
+
+retrieval:
+  k: 5

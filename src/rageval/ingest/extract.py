@@ -2,9 +2,10 @@
 
 Academic PDFs are the hard case: two-column layouts that naive extractors
 interleave, subset fonts that decode to (cid:NN), reference sections that
-add thousands of tokens of noise, and equations that fragment into
-punctuation soup. This module handles those and, critically, *measures*
-how well it did so failures are visible rather than silent.
+add thousands of tokens of noise, base64 image data leaking into the text
+layer, and equations that fragment into punctuation soup. This module
+handles those and, critically, *measures* how well it did so failures are
+visible rather than silent.
 """
 
 from __future__ import annotations
@@ -20,7 +21,15 @@ import pymupdf
 
 logger = logging.getLogger(__name__)
 
+# MuPDF writes colour-space and font warnings to stderr for perfectly
+# readable PDFs. They are noise, not extraction failures - quality is
+# measured by score_quality, not by whether MuPDF grumbled.
 pymupdf.TOOLS.mupdf_display_errors(False)
+
+
+# --------------------------------------------------------------------------
+# Patterns
+# --------------------------------------------------------------------------
 
 # Headings that mark the end of body content worth retrieving over.
 # Strict first: a line containing only "References". Falls back to a looser
@@ -35,7 +44,14 @@ _END_LOOSE = re.compile(
 )
 
 # Where body content resumes after a bibliography block.
-_RESUME = re.compile(r"^[ \t]*(?:appendix|supplement(?:ary|al)?)\b", re.IGNORECASE | re.MULTILINE) 
+_RESUME = re.compile(
+    r"^[ \t]*(?:appendix|supplement(?:ary|al)?)\b", re.IGNORECASE | re.MULTILINE
+)
+
+# A real bibliography has substantial body text before it. An absolute
+# threshold beats a percentage: in a 45-page paper with 36 pages of figure
+# appendices, the bibliography can sit at 8% of the document and still be
+# entirely genuine.
 _MIN_BODY_BEFORE_REFS = 3000
 
 # Numbered headings (1 Introduction / 2.3 Method) or known unnumbered ones.
@@ -50,9 +66,23 @@ _HEADING = re.compile(
     re.IGNORECASE | re.MULTILINE,
 )
 
+# Base64 image data leaks into the text layer of PDFs built by some
+# plotting toolchains - SVG glyph definitions, embedded PNGs.
+_ENCODED_MARKER = re.compile(r'base64|data:image/|=">|iVBORw0KGgo', re.IGNORECASE)
+# URLs are never encoded blobs, however random their path segments look.
+# A Google Forms link clears both the alnum and case-flip tests on its
+# random-looking ID, so it needs an explicit exemption.
+_URLISH = re.compile(
+    r"https?://|www\.|\.(?:com|org|net|edu|gov|io|ai|co|uk|de)/", re.IGNORECASE
+)
+
 _CID = re.compile(r"\(cid:\d+\)")
 _WORDLIKE = re.compile(r"^[A-Za-z][A-Za-z'-]{1,}$")
 
+
+# --------------------------------------------------------------------------
+# Data
+# --------------------------------------------------------------------------
 
 @dataclass
 class Section:
@@ -155,6 +185,45 @@ ENGINES = {"pymupdf": extract_pymupdf, "pdfplumber": extract_pdfplumber}
 # Cleaning
 # --------------------------------------------------------------------------
 
+def _looks_encoded(token: str) -> bool:
+    """True for base64/binary blobs, false for long legitimate identifiers.
+
+    Vowel frequency does not separate these - random base64 has roughly the
+    vowel rate of English, and PNG headers are full of 'A' runs. Case-flip
+    rate does: real words and camelCase identifiers do not alternate between
+    upper and lower case every few characters.
+    """
+    if len(token) < 40:
+        return False
+    if _ENCODED_MARKER.search(token):
+        return True
+    if _URLISH.search(token):
+        return False
+    if sum(c.isalnum() for c in token) / len(token) < 0.90:
+        return False  # URLs, DOIs and snake_case carry separators
+    letters = [c for c in token if c.isalpha()]
+    if len(letters) < 2:
+        return True
+    flips = sum(1 for a, b in zip(letters, letters[1:]) if a.isupper() != b.isupper())
+    return flips / (len(letters) - 1) >= 0.28
+
+
+def strip_encoded_blobs(text: str) -> str:
+    """Drop embedded image data, preserving line structure.
+
+    Line breaks must survive: split_sections and strip_references identify
+    their targets as whole lines, so anything that collapses newlines here
+    silently destroys document structure downstream.
+    """
+    if not _ENCODED_MARKER.search(text) and not any(len(t) >= 40 for t in text.split()):
+        return text  # fast path: most documents contain none
+
+    return "\n".join(
+        " ".join(t for t in line.split() if not _looks_encoded(t))
+        for line in text.split("\n")
+    )
+
+
 def normalize_text(text: str) -> str:
     """Repair extraction damage while PRESERVING line structure.
 
@@ -162,6 +231,8 @@ def normalize_text(text: str) -> str:
     only identifiable as lines. Collapsing them before parsing structure
     silently destroys both.
     """
+    text = strip_encoded_blobs(text)
+
     for bad, good in (("ﬁ", "fi"), ("ﬂ", "fl"), ("ﬀ", "ff"), ("ﬃ", "ffi"), ("ﬄ", "ffl")):
         text = text.replace(bad, good)
 
@@ -188,8 +259,7 @@ def strip_references(text: str) -> tuple[str, bool]:
 
     Cutting from References to end-of-document destroys both. So when a
     resumption marker follows the bibliography, only the block between them
-    is removed, and the position guard relaxes - in appendix-heavy papers
-    the bibliography can sit as early as 20% of the way through.
+    is removed, and the position guard relaxes to an absolute body length.
     """
     n = len(text)
     for pattern in (_END_STRICT, _END_LOOSE):
@@ -258,7 +328,7 @@ def score_quality(text: str, n_pages: int) -> dict:
 
 
 def classify(q: dict, n_sections: int) -> str:
-    """clean | degraded | failed - thresholds tuned on academic PDFs."""
+    """clean | degraded | failed - thresholds set a priori for academic PDFs."""
     if q["chars"] < 3000:
         return "failed"
     if q["cid_hits"] > 50 or q["alpha_ratio"] < 0.55:
@@ -283,8 +353,8 @@ def extract_document(path: Path, arxiv_id: str, engine: str = "pymupdf") -> Extr
             error=f"{type(exc).__name__}: {exc}",
         )
 
-    # Order is critical: structure is parsed while line breaks still exist,
-    # and soft wraps are only collapsed afterwards, per section.
+    # Order is critical: blobs are dropped and structure is parsed while
+    # line breaks still exist; soft wraps collapse only afterwards.
     normalized = normalize_text(raw)
     body, refs_found = strip_references(normalized)
     sections = split_sections(body)

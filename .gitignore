@@ -12,3 +12,4 @@ mlruns/
 *.egg-info/
 build/
 dist/
+.cache/
