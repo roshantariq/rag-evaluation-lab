@@ -64,8 +64,14 @@ def main() -> int:
     p.add_argument("--paper", required=True, help="arXiv ID, e.g. 1506.04214v2")
     p.add_argument("--quote", required=True, help="A phrase from the passage.")
     p.add_argument("--context", type=int, default=200, help="Chars of surrounding text to show.")
+    p.add_argument("--json", action="store_true",
+                   help="Print only the evidence block(s), for piping to Set-Clipboard.")
     p.add_argument("--extend", type=int, default=0,
-                   help="Extend the span by N chars each side before snapping.")
+                   help="Extend the span by N chars on both sides before snapping.")
+    p.add_argument("--before", type=int, default=None,
+                   help="Chars to extend backwards (overrides --extend on that side).")
+    p.add_argument("--after", type=int, default=None,
+                   help="Chars to extend forwards (overrides --extend on that side).")
     p.add_argument("--snap", default="sentence", choices=["sentence", "word", "none"],
                    help="Widen the span to clean boundaries. Default: sentence.")
     args = p.parse_args()
@@ -73,24 +79,47 @@ def main() -> int:
     text, title = load_text(args.paper)
     spans = find_spans(text, args.quote)
 
+    # Snap first, then de-duplicate: several raw hits inside one sentence
+    # collapse to the same span once widened, and printing them repeatedly
+    # buries the distinct passages.
+    back = args.before if args.before is not None else args.extend
+    fwd = args.after if args.after is not None else args.extend
+
+    snapped, seen = [], set()
+    for start, end in spans:
+        start = max(0, start - back)
+        end = min(len(text), end + fwd)
+        if args.snap == "sentence":
+            start, end = snap_to_sentences(text, start, end)
+        elif args.snap == "word":
+            start, end = snap_to_words(text, start, end)
+        if (start, end) not in seen:
+            seen.add((start, end))
+            snapped.append((start, end))
+    n_raw, spans = len(spans), snapped
+
     if not spans:
         print(f"Quote not found in {args.paper}.")
         print("The extracted text collapses line breaks - try a shorter phrase,")
         print("and check you are quoting the extraction rather than the PDF.")
         return 1
 
+    if args.json:
+        for start, end in spans:
+            print(json.dumps({
+                "arxiv_id": args.paper,
+                "char_start": start,
+                "char_end": end,
+                "quote": " ".join(text[start:end].split()),
+            }, ensure_ascii=False))
+        return 0
+
     print(f"\n{args.paper}  {title[:64]}")
     print(f"document length: {len(text)} chars")
-    print(f"{len(spans)} match(es)\n")
+    extra = f"  ({n_raw} raw hits collapsed)" if n_raw != len(spans) else ""
+    print(f"{len(spans)} distinct passage(s){extra}\n")
 
     for i, (start, end) in enumerate(spans, 1):
-        if args.extend:
-            start = max(0, start - args.extend)
-            end = min(len(text), end + args.extend)
-        if args.snap == "sentence":
-            start, end = snap_to_sentences(text, start, end)
-        elif args.snap == "word":
-            start, end = snap_to_words(text, start, end)
         before = " ".join(text[max(0, start - args.context):start].split())
         span_text = text[start:end]
         after = " ".join(text[end:end + args.context].split())

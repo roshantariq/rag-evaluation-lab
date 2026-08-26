@@ -1,0 +1,13 @@
+﻿
+1506.04214v2  Convolutional LSTM Network: A Machine Learning Approach for Prec
+document length: 32178 chars
+1 distinct passage(s)
+
+--- match 1: chars 27240-27720 ----------------------------------------
+...10). 6We use an open-source project to calculate the optical flow: http://sourceforge.net/ projects/varflow/ 7 Table 2: Comparison of the average scores of different models over 15 prediction steps.
+>>> Model Rainfall-MSE CSI FAR POD Correlation ConvLSTM(3x3)-3x3-64-3x3-64 1.420 0.577 0.195 0.660 0.908 Rover1 1.712 0.516 0.308 0.636 0.843 Rover2 1.684 0.522 0.301 0.642 0.850 Rover3 1.685 0.522 0.301 0.642 0.849 FC-LSTM-2000-2000 1.865 0.286 0.335 0.351 0.774 ConvLSTM ROVER1 ROVER2 ROVER3 FC-LSTM 1 1 0.8 Correlation 0.9 CSI 0.6 0.8 0.4 0.7 0.2 Time 0 5 10 15 Time 0 5 10 15 0.5 1 0.4 0.8 0.3 POD FAR 0.6 Figure 6: Two predicion examples for the precipitation nowcasting problem.
+All the predictions and ground truths are sampled with an interval of 3. From top to bottom: input frames; ground truth frames; prediction by ConvLSTM network; prediction by ROVER2. 0.2 0.4 0.1 0 0.2...
+
+evidence block:
+{"arxiv_id": "1506.04214v2", "char_start": 27240, "char_end": 27720, "quote": "Model Rainfall-MSE CSI FAR POD Correlation ConvLSTM(3x3)-3x3-64-3x3-64 1.420 0.577 0.195 0.660 0.908 Rover1 1.712 0.516 0.308 0.636 0.843 Rover2 1.684 0.522 0.301 0.642 0.850 Rover3 1.685 0.522 0.301 0.642 0.849 FC-LSTM-2000-2000 1.865 0.286 0.335 0.351 0.774 ConvLSTM ROVER1 ROVER2 ROVER3 FC-LSTM 1 1 0.8 Correlation 0.9 CSI 0.6 0.8 0.4 0.7 0.2 Time 0 5 10 15 Time 0 5 10 15 0.5 1 0.4 0.8 0.3 POD FAR 0.6 Figure 6: Two predicion examples for the precipitation nowcasting problem."}
+
