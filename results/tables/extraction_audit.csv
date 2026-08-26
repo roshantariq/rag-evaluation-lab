@@ -1,0 +1,131 @@
+arxiv_id,engine,n_pages,raw_chars,clean_chars,references_found,n_sections,status,error,chars,chars_per_page,alpha_ratio,wordlike_ratio,cid_hits,mean_word_len,title
+1506.04214v2,pymupdf,12,37325,32178,True,6,clean,,32178,2681.5,0.928,0.85,0,5.23,Convolutional LSTM Network: A Machine Learning Approach for Precipitation Nowcasting
+2304.14131v2,pymupdf,24,68708,57461,True,14,clean,,57461,2394.2,0.916,0.823,0,5.65,TempEE: Temporal-Spatial Parallel Transformer for Radar Echo Extrapolation Beyond Auto-Regression
+2212.02952v2,pymupdf,9,27383,23956,True,15,clean,,23956,2661.8,0.892,0.791,0,5.48,Simple Baseline for Weather Forecasting Using Spatiotemporal Context Aggregation Network
+2002.05398v3,pymupdf,22,66016,57440,True,9,clean,,57440,2610.9,0.922,0.848,0,5.22,Ensemble methods for neural network-based weather forecasts
+2403.13458v2,pymupdf,27,75420,59219,True,16,clean,,59219,2193.3,0.9,0.807,0,5.35,Uncertainty quantification for data-driven weather models
+2408.11438v3,pymupdf,32,78289,71019,True,59,clean,,71019,2219.3,0.888,0.726,0,5.34,Benchmarking AI-based data assimilation to advance data-driven global weather forecasting
+2107.01343v1,pymupdf,28,51848,40280,True,16,clean,,40280,1438.6,0.901,0.779,0,5.0,Short-term probabilistic photovoltaic power forecast based on deep convolutional long short-term memory network and kernel density estimation
+2608.21812v1,pymupdf,53,130287,126914,True,26,clean,,126914,2394.6,0.902,0.826,0,6.54,Video Diffusion for Satellite-based High-Dynamical-Fidelity Precipitation (HiDFiP) Field Generation
+2008.10679v2,pymupdf,13,42618,27420,True,5,clean,,27420,2109.2,0.943,0.826,0,5.43,Machine learning for weather and climate are worlds apart
+2512.01062v1,pymupdf,9,23673,14510,True,6,clean,,14510,1612.2,0.899,0.828,0,5.42,PIANO: Physics-informed Dual Neural Operator for Precipitation Nowcasting
+2601.01605v1,pymupdf,12,57657,46294,True,6,clean,,46294,3857.8,0.932,0.873,0,6.46,REE-TTT: Highly Adaptive Radar Echo Extrapolation Based on Test-Time Training
+2011.04452v1,pymupdf,6,19302,17461,True,10,clean,,17461,2910.2,0.973,0.945,0,5.36,Comparison between ARIMA and Deep Learning Models for Temperature Forecasting
+2007.04417v2,pymupdf,10,43203,35766,True,20,clean,,35766,3576.6,0.935,0.889,0,5.12,SmaAt-UNet: Precipitation Nowcasting using a Small Attention-UNet Architecture
+2308.15560v2,pymupdf,44,79099,65279,True,13,clean,,65279,1483.6,0.933,0.859,0,5.35,WeatherBench 2: A benchmark for the next generation of data-driven global weather models
+2601.09467v1,pymupdf,16,57351,50513,True,2,clean,,50513,3157.1,0.944,0.886,0,6.15,Searth Transformer: A Transformer Architecture Incorporating Earth's Geospheric Physical Priors for Global Mid-Range Weather Forecasting
+2008.01798v2,pymupdf,11,33998,27474,True,9,clean,,27474,2497.6,0.921,0.822,0,5.38,Physics-informed Tensor-train ConvLSTM for Volumetric Velocity Forecasting of Loop Current
+2410.13314v1,pymupdf,13,56018,47957,True,18,clean,,47957,3689.0,0.924,0.856,0,5.81,Precipitation Nowcasting Using Diffusion Transformer with Causal Attention
+2603.22320v3,pymupdf,16,67141,44190,True,10,clean,,44190,2761.9,0.949,0.917,0,6.07,How Can Machine Learning Emulators Best Support Climate Science?
+1907.08069v2,pymupdf,10,21721,19513,True,8,clean,,19513,1951.3,0.931,0.851,0,5.48,Precipitation Nowcasting with Star-Bridge Networks
+2503.22724v1,pymupdf,5,24516,20204,True,9,clean,,20204,4040.8,0.937,0.872,0,5.91,A Spatial-temporal Deep Probabilistic Diffusion Model for Reliable Hail Nowcasting with Radar Echo Extrapolation
+2406.19615v1,pymupdf,10,39900,18531,True,17,clean,,18531,1853.1,0.912,0.804,0,5.29,VarteX: Enhancing Weather Forecast through Distributed Variable Representation
+2407.11050v1,pymupdf,13,41719,35270,True,24,clean,,35270,2713.1,0.911,0.793,0,5.15,Graph Neural Networks and Spatial Information Learning for Post-Processing Ensemble Weather Forecasts
+2403.15598v1,pymupdf,9,30448,22975,True,7,clean,,22975,2552.8,0.945,0.904,0,5.47,An ensemble of data-driven weather prediction models for operational sub-seasonal forecasting
+2506.10868v1,pymupdf,14,23960,17928,True,9,clean,,17928,1280.6,0.899,0.769,0,5.03,A multi-scale loss formulation for learning a probabilistic model with proper score optimisation
+2312.01197v1,pymupdf,6,16720,14135,True,7,clean,,14135,2355.8,0.964,0.929,0,5.72,Short-term Precipitation Forecasting in The Netherlands: An Application of Convolutional LSTM neural networks to weather radar data
+2603.13818v1,pymupdf,10,50252,44010,True,8,clean,,44010,4401.0,0.919,0.822,0,6.21,PA-Net: Precipitation-Adaptive Mixture-of-Experts for Long-Tail Rainfall Nowcasting
+2506.09891v2,pymupdf,37,95817,39690,True,10,degraded,,39690,1072.7,0.928,0.862,0,5.52,Causal Climate Emulation with Bayesian Filtering
+2210.12853v1,pymupdf,8,38777,34910,True,36,clean,,34910,4363.8,0.883,0.785,0,5.5,Deep-Learning-Based Precipitation Nowcasting with Ground Weather Station Data and Radar Data
+2312.12455v2,pymupdf,18,59411,47958,True,34,clean,,47958,2664.3,0.888,0.739,0,5.16,FengWu-4DVar: Coupling the Data-driven Weather Forecasting Model with 4D Variational Assimilation
+2304.09070v1,pymupdf,10,33194,27151,True,6,clean,,27151,2715.1,0.947,0.865,0,5.32,M-ENIAC: A machine learning recreation of the first successful numerical weather forecasts
+2312.08264v1,pymupdf,12,38286,33793,True,8,clean,,33793,2816.1,0.958,0.909,0,5.76,Kunyu: A High-Performing Global Weather Model Beyond Regression Losses
+2312.15796v2,pymupdf,96,168333,154105,True,82,clean,,154105,1605.3,0.893,0.734,0,5.23,GenCast: Diffusion-based ensemble forecasting for medium-range weather
+2006.08209v1,pymupdf,25,47903,39454,True,11,clean,,39454,1578.2,0.933,0.888,0,5.4,Multimodal fusion for sea level anomaly forecasting
+2503.19943v1,pymupdf,28,60156,53380,True,24,clean,,53380,1906.4,0.91,0.831,0,5.69,A Spatiotemporal Radar-Based Precipitation Model for Water Level Prediction and Flood Forecasting
+2311.03721v1,pymupdf,34,121334,121215,False,11,clean,,121215,3565.1,0.902,0.802,0,5.49,ClimateSet: A Large-Scale Climate Model Dataset for Machine Learning
+1905.09932v1,pymupdf,9,45477,36698,True,10,clean,,36698,4077.6,0.953,0.915,0,5.55,Precipitation Nowcasting with Satellite Imagery
+2503.19940v1,pymupdf,11,46876,34649,True,23,clean,,34649,3149.9,0.923,0.854,0,6.31,FuXi-RTM: A Physics-Guided Prediction Framework with Radiative Transfer Modeling
+2003.12140v2,pymupdf,17,39602,32303,True,27,clean,,32303,1900.2,0.938,0.864,0,5.23,MetNet: A Neural Weather Model for Precipitation Forecasting
+2508.18486v2,pymupdf,18,37010,23475,True,13,clean,,23475,1304.2,0.932,0.855,0,5.48,Huracan: A skillful end-to-end data-driven system for ensemble data assimilation and weather prediction
+2312.12462v4,pymupdf,18,64567,51145,True,10,clean,,51145,2841.4,0.946,0.901,0,5.76,Towards an end-to-end artificial intelligence driven global weather forecasting system
+2009.14573v6,pymupdf,15,30073,26396,True,7,clean,,26396,1759.7,0.929,0.851,0,5.44,Rain-Code Fusion : Code-to-code ConvLSTM Forecasting Spatiotemporal Precipitation
+1611.03403v1,pymupdf,40,112494,100308,True,3,clean,,100308,2507.7,0.95,0.876,0,5.78,Synergistic Dynamic Theory of Complex Coevolutionary Systems: Disentangling Nonlinear Spatiotemporal Controls on Precipitation
+2510.03305v1,pymupdf,42,118423,93875,True,9,clean,,93875,2235.1,0.948,0.895,0,6.01,Machine Learning Workflows in Climate Modeling: Design Patterns and Insights from Case Studies
+1812.10915v1,pymupdf,5,14163,10579,True,8,clean,,10579,2115.8,0.951,0.894,0,5.29,Spatiotemporal Data Fusion for Precipitation Nowcasting
+2408.06400v2,pymupdf,45,48698,48680,False,16,degraded,,48680,1081.8,0.914,0.817,0,5.52,MetMamba: Regional Weather Forecasting with Spatial-Temporal Mamba Model
+2007.04005v2,pymupdf,44,63777,46215,True,9,degraded,,46215,1050.3,0.957,0.915,0,5.23,Statistical post-processing of wind speed forecasts using convolutional neural networks
+2509.09052v1,pymupdf,11,30593,22027,True,7,clean,,22027,2002.5,0.945,0.879,0,5.52,MoWE : A Mixture of Weather Experts
+2505.13873v1,pymupdf,19,75247,63612,True,21,clean,,63612,3348.0,0.881,0.743,0,5.36,Utilizing Strategic Pre-training to Reduce Overfitting: Baguan -- A Pre-trained Weather Forecasting Model
+1902.06515v1,pymupdf,10,56082,47433,True,7,clean,,47433,4743.3,0.935,0.863,0,5.28,Grids versus Graphs: Partitioning Space for Improved Taxi Demand-Supply Forecasts
+2407.02089v2,pymupdf,20,49554,37806,True,7,clean,,37806,1890.3,0.946,0.902,0,5.64,GPTCast: a weather language model for precipitation nowcasting
+2312.02858v2,pymupdf,9,32097,18980,True,5,clean,,18980,2108.9,0.951,0.874,0,5.67,Towards Causal Representations of Climate Model Data
+2203.13263v1,pymupdf,11,38147,30255,True,18,clean,,30255,2750.5,0.927,0.833,0,5.07,Precipitaion Nowcasting using Deep Neural Network
+2603.06712v1,pymupdf,9,42741,35397,True,5,clean,,35397,3933.0,0.893,0.806,0,5.7,Uncertainty-Aware Solar Flare Regression
+2107.06991v1,pymupdf,17,41489,34171,True,14,clean,,34171,2010.1,0.938,0.861,0,5.46,Physics-informed generative neural network: an application to troposphere temperature prediction
+2602.00622v2,pymupdf,14,40645,33675,True,3,clean,,33675,2405.4,0.965,0.913,0,5.6,"""What is a realistic forecast?"" Assessing data-driven weather forecasts, a journey from verification to falsification"
+2212.12794v2,pymupdf,102,219134,207469,True,82,clean,,207469,2034.0,0.852,0.668,0,4.74,GraphCast: Learning skillful medium-range global weather forecasting
+2507.19513v1,pymupdf,9,47351,36410,True,3,clean,,36410,4045.6,0.895,0.797,0,5.95,Enhancing Spatiotemporal Networks with xLSTM: A Scalar LSTM Approach for Cellular Traffic Forecasting
+2603.00418v1,pymupdf,23,64015,47971,True,12,clean,,47971,2085.7,0.908,0.826,0,5.88,Station2Radar: query conditioned gaussian splatting for precipitation field
+2512.07429v1,pymupdf,16,50267,39433,True,11,clean,,39433,2464.6,0.926,0.868,0,5.35,Bridging CORDEX and CMIP6: Machine Learning Downscaling for Wind and Solar Energy Droughts in Central Europe
+1706.03458v2,pymupdf,17,57803,53050,True,6,clean,,53050,3120.6,0.858,0.625,0,4.29,Deep Learning for Precipitation Nowcasting: A Benchmark and A New Model
+2405.06004v2,pymupdf,19,44511,33903,True,26,clean,,33903,1784.4,0.925,0.83,0,5.46,EWMoE: An effective model for global weather forecasting with mixture-of-experts
+2304.12865v1,pymupdf,11,42109,27902,True,6,clean,,27902,2536.5,0.936,0.829,0,5.11,Constraining Chaos: Enforcing dynamical invariants in the training of recurrent neural networks
+2607.11457v1,pymupdf,20,67604,57648,True,13,clean,,57648,2882.4,0.952,0.901,0,5.75,HourGlass: A probabilistic data-driven temporal downscaler for global and regional weather forecasting
+2306.12873v3,pymupdf,27,56395,47689,True,20,clean,,47689,1766.3,0.929,0.855,0,5.53,FuXi: A cascade machine learning forecasting system for 15-day global weather forecast
+2504.15322v1,pymupdf,15,35345,28097,True,11,clean,,28097,1873.1,0.937,0.89,0,6.4,How to systematically develop an effective AI-based bias correction model?
+2606.24563v1,pymupdf,14,40686,34064,True,14,clean,,34064,2433.1,0.939,0.895,0,5.51,An observationally constrained probabilistic trigger for organized deep convection in an NWP ensemble
+2606.19302v1,pymupdf,22,80796,54935,True,10,clean,,54935,2497.0,0.936,0.883,0,6.07,Optimal scenario design for climate emulation
+2402.04290v1,pymupdf,20,47458,37798,True,24,clean,,37798,1889.9,0.892,0.806,0,5.79,CasCast: Skillful High-resolution Precipitation Nowcasting via Cascaded Modelling
+2002.00469v3,pymupdf,26,71109,51864,True,14,clean,,51864,1994.8,0.92,0.837,0,5.36,WeatherBench: A benchmark dataset for data-driven weather forecasting
+2406.16955v2,pymupdf,10,34933,26972,True,14,clean,,26972,2697.2,0.932,0.857,0,5.41,SRViT: Vision Transformers for Estimating Radar Reflectivity from Satellite Observations at Scale
+2506.08285v1,pymupdf,13,38801,29140,True,14,clean,,29140,2241.5,0.912,0.795,0,5.12,Imposing the Fundamental Dynamical Constraint of Hydrostatic Balance to Improve Global ML Weather Prediction
+2512.05323v1,pymupdf,26,40439,36441,True,6,clean,,36441,1401.6,0.946,0.9,0,5.71,Robustness Test for AI Forecasting of Hurricane Florence Using FourCastNetv2 and Random Perturbations of the Initial Condition
+2603.10453v2,pymupdf,27,71450,60766,True,22,clean,,60766,2250.6,0.944,0.876,0,5.98,Spatio-Temporal Forecasting of Retaining Wall Deformation: Mitigating Error Accumulation via Multi-Resolution ConvLSTM Stacking Ensemble
+2605.17603v1,pymupdf,24,59453,51301,True,19,clean,,51301,2137.5,0.937,0.863,0,6.09,Longwang: Zero-Shot Global Spatiotemporal Precipitation Downscaling with a Latent Generative Prior
+2502.10893v2,pymupdf,23,60939,43935,True,9,clean,,43935,1910.2,0.898,0.811,0,5.25,Reanalysis-based Global Radiative Response to Sea Surface Temperature Patterns: Evaluating the Ai2 Climate Emulator
+2605.30122v2,pymupdf,7,31037,25414,True,15,clean,,25414,3630.6,0.933,0.859,0,5.96,Beyond MSE: Improving Precipitation Nowcasting with Multi-Quantile Regression
+2509.11047v1,pymupdf,6,27684,22831,True,22,clean,,22831,3805.2,0.919,0.863,0,5.73,Data-Efficient Ensemble Weather Forecasting with Diffusion Models
+2312.14980v1,pymupdf,23,54232,47405,True,14,clean,,47405,2061.1,0.938,0.871,0,5.27,TPTNet: A Data-Driven Temperature Prediction Model Based on Turbulent Potential Temperature
+2401.15305v2,pymupdf,16,59269,49295,True,8,clean,,49295,3080.9,0.918,0.824,0,5.13,A Practical Probabilistic Benchmark for AI Weather Models
+2407.01598v1,pymupdf,48,64020,62694,True,16,clean,,62694,1306.1,0.89,0.8,0,5.55,Long-Term Prediction Accuracy Improvement of Data-Driven Medium-Range Global Weather Forecast
+2310.16071v1,pymupdf,9,28093,24293,True,20,clean,,24293,2699.2,0.951,0.884,0,5.67,Grid Frequency Forecasting in University Campuses using Convolutional LSTM
+2407.04882v1,pymupdf,43,79733,64361,True,8,clean,,64361,1496.8,0.936,0.897,0,5.85,Improving ensemble extreme precipitation forecasts using generative artificial intelligence
+2406.17729v2,pymupdf,40,108254,79431,True,6,clean,,79431,1985.8,0.944,0.906,0,5.48,Emulation with uncertainty quantification of regional sea-level change caused by the Antarctic Ice Sheet
+2410.08641v2,pymupdf,8,21784,13597,True,3,clean,,13597,1699.6,0.955,0.925,0,6.17,Multi-Source Temporal Attention Network for Precipitation Nowcasting
+2403.10555v1,pymupdf,17,46470,38837,True,33,clean,,38837,2284.5,0.921,0.849,0,5.79,KARINA: An Efficient Deep Learning Model for Global Weather Forecast
+2603.16976v1,pymupdf,13,37892,37818,False,6,clean,,37818,2909.1,0.971,0.952,0,6.13,Implementation of tangent linear and adjoint models for neural networks based on a compiler library tool
+2501.19374v2,pymupdf,21,69336,40119,True,27,clean,,40119,1910.4,0.931,0.845,0,5.43,Fixing the Double Penalty in Data-Driven Weather Forecasting Through a Modified Spherical Harmonic Loss Function
+2502.16036v1,pymupdf,26,42809,41458,True,9,clean,,41458,1594.5,0.92,0.887,0,5.77,AI Models Still Lag Behind Traditional Numerical Models in Predicting Sudden-Turning Typhoons
+2505.24429v2,pymupdf,28,113206,92922,True,8,clean,,92922,3318.6,0.928,0.856,0,5.62,Deep Learning Weather Models for Subregional Ocean Forecasting: A Case Study on the Canary Current Upwelling System
+2206.11669v3,pymupdf,11,31573,23760,True,8,clean,,23760,2160.0,0.918,0.849,0,5.2,Short-range forecasts of global precipitation using deep learning-augmented numerical weather prediction
+2402.04342v2,pymupdf,19,36761,33108,True,9,clean,,33108,1742.5,0.92,0.838,0,5.12,Building Ocean Climate Emulators
+2608.06082v1,pymupdf,11,29334,25097,True,15,clean,,25097,2281.5,0.956,0.909,0,5.51,Dense-Cast: A lightweight ensemble of deep learning architectures for precipitation nowcasting
+2412.14048v1,pymupdf,14,39800,16612,True,9,degraded,,16612,1186.6,0.932,0.841,0,5.67,Evidential Deep Learning for Probabilistic Modelling of Extreme Storm Events
+2404.06668v1,pymupdf,5,28472,25385,True,3,clean,,25385,5077.0,0.969,0.949,0,6.55,Forecasting the Future with Future Technologies: Advancements in Large Meteorological Models
+2012.09670v1,pymupdf,11,49075,38908,True,17,clean,,38908,3537.1,0.929,0.855,0,5.72,RainBench: Towards Global Precipitation Forecasting from Satellite Imagery
+2310.19822v1,pymupdf,25,46504,36139,True,25,clean,,36139,1445.6,0.92,0.854,0,5.42,FuXi-Extreme: Improving extreme rainfall and wind forecasts with diffusion model
+2210.13648v2,pymupdf,11,33569,22658,True,10,clean,,22658,2059.8,0.928,0.859,0,5.39,Learning to forecast vegetation greenness at fine resolution over Africa with ConvLSTMs
+2512.15222v1,pymupdf,24,50423,41110,True,11,clean,,41110,1712.9,0.864,0.796,0,5.95,Huayu: Advanced Real-Time Precipitation Estimation from Geostationary Satellite
+2406.14775v2,pymupdf,9,29233,16099,True,13,clean,,16099,1788.8,0.924,0.844,0,5.47,Machine Learning Global Simulation of Nonlocal Gravity Wave Propagation
+2509.25263v3,pymupdf,13,76914,69871,True,13,clean,,69871,5374.7,0.836,0.755,0,5.92,How Effective Are Time-Series Models for Precipitation Nowcasting? A Comprehensive Benchmark for GNSS-based Precipitation Nowcasting
+2508.01426v2,pymupdf,35,102365,43175,True,13,clean,,43175,1233.6,0.897,0.783,0,6.02,UniExtreme: A Universal Foundation Model for Extreme Weather Forecasting
+2103.01479v2,pymupdf,13,43865,36574,True,5,clean,,36574,2813.4,0.88,0.753,0,5.19,Statistical Post-Processing for Gridded Temperature Prediction Using Encoder-Decoder-Based Deep Convolutional Neural Networks
+2605.14317v1,pymupdf,19,57802,47446,True,11,clean,,47446,2497.2,0.944,0.871,0,5.87,Guided Diffusion Sampling for Precipitation Forecast Interventions
+2308.04460v1,pymupdf,38,30792,26343,True,14,degraded,,26343,693.2,0.932,0.901,0,5.62,The Compatibility between the Pangu Weather Forecasting Model and Meteorological Operational Data
+1711.02316v1,pymupdf,4,14435,13171,True,2,clean,,13171,3292.8,0.934,0.876,0,5.26,DeepRain: ConvLSTM Network for Precipitation Prediction using Multichannel Radar Data
+1506.08768v1,pymupdf,16,26893,26453,False,4,clean,,26453,1653.3,0.933,0.86,0,5.58,Scaling in stratocumulus fields: an emergent property
+2509.12490v2,pymupdf,29,63893,34517,True,16,degraded,,34517,1190.2,0.949,0.9,0,5.72,SamudrACE: Fast and Accurate Coupled Climate Modeling with 3D Ocean and Atmosphere Emulators
+2102.08175v1,pymupdf,11,44227,37112,True,15,clean,,37112,3373.8,0.875,0.781,0,5.17,Accurate and Clear Precipitation Nowcasting with Consecutive Attention and Rain-map Discrimination
+2211.02556v1,pymupdf,19,95511,82823,True,22,clean,,82823,4359.1,0.899,0.807,0,5.33,Pangu-Weather: A 3D High-Resolution Model for Fast and Accurate Global Weather Forecast
+2403.03702v2,pymupdf,36,95751,86115,True,9,clean,,86115,2392.1,0.932,0.855,0,5.01,Development of an offline and online hybrid model for the Integrated Forecasting System
+2209.14782v2,pymupdf,26,69856,53067,True,54,clean,,53067,2041.0,0.924,0.824,0,5.38,A case study of spatiotemporal forecasting techniques for weather forecasting
+2408.05472v2,pymupdf,73,136793,101388,True,49,clean,,101388,1388.9,0.902,0.776,0,5.45,FuXi Weather: A data-to-forecast machine learning system for global weather
+1905.09771v1,pymupdf,6,30588,26995,True,10,clean,,26995,4499.2,0.93,0.839,0,5.53,Multi-Service Mobile Traffic Forecasting via Convolutional Long Short-Term Memories
+1907.09725v1,pymupdf,22,25225,20106,True,7,degraded,,20106,913.9,0.938,0.893,0,5.59,VARENN: Graphical representation of spatiotemporal data and application to climate studies
+2407.14158v3,pymupdf,69,132841,104225,True,14,clean,,104225,1510.5,0.941,0.908,0,5.29,Machine learning emulation of precipitation from km-scale UK regional climate simulations using a diffusion model
+2603.04461v1,pymupdf,12,42098,34806,True,22,clean,,34806,2900.5,0.94,0.887,0,5.51,MAD-SmaAt-GNet: A Multimodal Advection-Guided Neural Network for Precipitation Nowcasting
+2312.03876v2,pymupdf,28,71752,39749,True,19,clean,,39749,1419.6,0.932,0.845,0,5.64,Scaling transformer neural networks for skillful and reliable medium-range weather forecasting
+2008.08626v2,pymupdf,15,42776,34906,True,12,clean,,34906,2327.1,0.927,0.857,0,5.27,Data-driven medium-range weather prediction with a Resnet pretrained on climate simulations: A new model for WeatherBench
+2402.01295v4,pymupdf,17,57465,31744,True,11,clean,,31744,1867.3,0.908,0.814,0,5.32,ExtremeCast: Boosting Extreme Value Prediction for Global Weather Forecast
+2402.17966v4,pymupdf,22,45030,38845,True,30,clean,,38845,1765.7,0.896,0.768,0,5.63,STC-ViT: Spatio Temporal Continuous Vision Transformer for Medium-range Global Weather Forecasting
+2304.12630v2,pymupdf,10,46998,41146,True,25,clean,,41146,4114.6,0.942,0.875,0,5.39,Spatiotemporal Graph Convolutional Recurrent Neural Network Model for Citywide Air Pollution Forecasting
+2504.10776v1,pymupdf,12,51167,36935,True,21,clean,,36935,3077.9,0.897,0.844,0,5.9,Rainy: Unlocking Satellite Calibration for Deep Learning in Precipitation
+2301.13462v1,pymupdf,27,80462,53751,True,19,clean,,53751,1990.8,0.95,0.905,0,5.56,Towards Learned Emulation of Interannual Water Isotopologue Variations in General Circulation Models
+2410.05805v1,pymupdf,21,56756,49083,True,14,clean,,49083,2337.3,0.897,0.797,0,5.43,PostCast: Generalizable Postprocessing for Precipitation Nowcasting via Unsupervised Blurriness Modeling
+2103.14430v2,pymupdf,21,78902,72275,True,7,clean,,72275,3441.7,0.933,0.879,0,5.08,Combining distribution-based neural networks to predict weather forecast probabilities
+1907.11617v2,pymupdf,19,59056,43853,True,7,clean,,43853,2308.1,0.94,0.895,0,5.46,Analog forecasting of extreme-causing weather patterns using deep learning
+2404.00411v3,pymupdf,43,71179,53891,True,8,clean,,53891,1253.3,0.95,0.89,0,5.55,Aardvark weather: end-to-end data-driven weather forecasting
+2412.13957v2,pymupdf,23,67089,54784,True,16,clean,,54784,2381.9,0.944,0.883,0,5.47,Self-attentive Transformer for Fast and Accurate Postprocessing of Temperature and Wind Speed Forecasts
+1909.02902v4,pymupdf,15,80715,67689,True,13,clean,,67689,4512.6,0.933,0.856,0,5.31,Dynamic Spatial-Temporal Representation Learning for Traffic Flow Prediction
+2608.08436v1,pymupdf,12,64039,55636,True,5,clean,,55636,4636.3,0.929,0.864,0,6.13,FreCast: Refining Radar Echo Intensity via Phase-Preserving Amplitude Residual Diffusion for Precipitation Nowcasting
