@@ -3,7 +3,8 @@
 Running record of decisions, defects and measured results. Phase numbering
 follows the build plan. Newest phase last.
 
-**Status:** Phases 0–2 complete. Phase 3 (baseline system) next.
+**Status:** Phases 0–2 complete and extraction frozen. Phase 3 (baseline
+system) built through retrieval and generation; Phase 4 (gold set) next.
 
 ---
 
@@ -183,6 +184,137 @@ The first extraction run reported 100% degraded and was obviously broken.
 The second reported 94.6% clean and looked finished, while silently
 deleting a third of some papers. A plausible number is the one that does
 not get audited.
+
+---
+
+---
+
+## Phase 2b — Encoded blob removal (extraction freeze)
+
+Triggered by Phase 3 retrieval results, before the gold set could anchor to
+extraction output.
+
+### What prompted it
+
+The first real search of the index returned five results for "what is the
+fraction skill score", all of them chart axis labels:
+
+    "8 10 0.4 2 4 6 8 10 0.4 0.25 g) Skill score (ACC): t500 ..."
+
+Chunk-level quality measurement (`scripts/diagnose_chunks.py`) showed the
+index is 4.3% below 0.40 prose ratio, and that low-prose chunks fall into
+four categories a single threshold cannot separate:
+
+| Sample | Category | Valuable |
+|---|---|---|
+| `0.88/0.98 0.42/0.44 SW62701500` | results table | yes |
+| `√ 𝑑+ 1 ≤𝑅 𝑘 √︄ 𝜎2𝑅𝑑1/2` | equations in math Unicode | yes, unretrievable |
+| `Drought days 200 100 0 16 80 4` | chart axis labels | no |
+| `. . . . . . . 18 1.2` | table-of-contents dot leader | no |
+
+Only one category was actionable: base64 image data leaking from the PDF
+text layer (SVG glyph definitions in GenCast, JWT segments elsewhere).
+That is not content under any interpretation.
+
+### Decision
+
+**Removed base64 only.** The remaining categories become a measured Phase 6
+ablation axis (filter off / 0.3 / 0.4 / 0.5) rather than a silent filter,
+because the threshold that would catch axis labels (~0.60) also removes
+15.4% of the index across 99 papers, results tables included.
+
+### Defects found
+
+**Vowel frequency does not detect base64.** The first detector used vowel
+ratio, on the assumption that encoded data would look less word-like.
+Random base64 has roughly the vowel rate of English, and PNG headers are
+full of `A` runs. It caught 1 of 4 test blobs.
+
+*Resolution.* Case-flip rate — the share of adjacent letter pairs that
+change case. Real words and camelCase identifiers do not alternate every
+few characters; base64 does. Combined with an alphanumeric-ratio gate
+(URLs and snake_case carry separators) and explicit markers.
+
+**Claimed the fix worked without checking it.** Reported success on the
+basis that base64 entries had left a top-10 list and the chunk count had
+dropped by six — then recommended committing and freezing on that basis.
+Neither observation shows whether anything was deleted that should have
+survived, and deletions are invisible in every summary statistic. This is
+the same failure mode as the appendix bug earlier in Phase 2.
+
+*Resolution.* `scripts/verify_blob_strip.py` re-extracts all 130 PDFs and
+answers two questions separately: did anything encoded survive, and what
+exactly was removed. The full removal log is written to
+`results/tables/blob_strip_audit.csv` for human reading.
+
+**The verification found two false positives.** A Google Forms URL in FuXi
+(`google.com/forms/d/e/1FAIpQLSf...`) and a URL query fragment. Both
+cleared the alnum gate at 0.915 and the case-flip test on their random
+path segments.
+
+*Resolution.* Explicit URL exemption. Removals went 17 → 16, the Forms
+link survived, and the extraction audit stayed byte-identical (123/7/0,
+references 126/130, median 2296 chars per page) — confirming the guard
+changed only what it was meant to.
+
+### Final state
+
+- 16 tokens removed from 3 papers, every one read and accounted for
+- No encoded data survives anywhere in `data/interim/`
+- One known false positive retained deliberately: a domainless URL query
+  fragment in 2008.08626v2, zero retrieval value; widening the exemption
+  would let real blobs through
+
+### Standing lesson
+
+Verification belongs *before* the freeze, not after. Freezing is the point
+at which mistakes stop being cheap, and "the symptom disappeared" is not
+the same claim as "the fix is correct".
+
+---
+
+## Phase 3 — Baseline system
+
+Chunking, embedding, vector store, dense retrieval, generation.
+
+### Design decisions
+
+**Chunks carry character-span provenance.** Every chunk records
+`(arxiv_id, char_start, char_end)` against the extracted text, and its ID
+is derived from that span. Boundaries come from real word positions rather
+than token-decode arithmetic, so `text[char_start:char_end] == chunk.text`
+holds by construction. Verified across 300 randomised documents × 6
+chunker settings, zero failures.
+
+**tiktoken is optional.** It downloads its encoding on first use, so an
+offline fresh clone would fail at chunking. A word-count estimate is the
+fallback; chunk sizes shift slightly, spans stay exact.
+
+**Embeddings supplied to Chroma, never computed by it.** Keeps one code
+path for embedding and makes the ablation's model axis explicit. Cached in
+SQLite on a hash of (model, text) — the rebuild after the blob fix
+recomputed 148 of 2938 chunks and took 12s instead of 84s.
+
+**Response caching keyed on the full request.** Model, temperature, system
+and user prompt. Any prompt change is a deliberate cache miss. Necessary
+because RAGAS multiplies calls roughly fivefold per answer.
+
+**Three prompt strategies differing in exactly one respect.** `naive`,
+`abstain`, `abstain_confidence` share context format, citation
+requirement and answer style, so the Phase 7 comparison isolates the
+abstention instruction.
+
+### Baseline configuration
+
+Fixed 512-token chunks, no overlap, `all-MiniLM-L6-v2`, ChromaDB cosine,
+top-5 dense retrieval. 2,938 chunks from 130 papers; median 2,113 chars
+per chunk, median 19 chunks per paper, max 120 (GraphCast).
+
+### Known weakness, deliberately unfixed
+
+Retrieval for metric-name queries returns chart axis labels. Left broken:
+the baseline exists to be beaten, and this is the motivating example for
+the Phase 6 chunk-filter ablation.
 
 ---
 

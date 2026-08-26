@@ -13,3 +13,10 @@ index:
 
 retrieval:
   k: 5
+
+generation:
+  provider: openai          # or "azure"
+  model: gpt-4o-mini
+  temperature: 0.0          # determinism matters: ablations must be comparable
+  max_tokens: 700
+  prompt_strategy: abstain  # naive | abstain | abstain_confidence

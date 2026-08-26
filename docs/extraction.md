@@ -45,3 +45,15 @@ investigated; a plausible one does not.
 - Equations fragment into punctuation. Formulae are not retrievable.
 - MuPDF colour-space warnings on stderr are suppressed; they do not
   correlate with extraction quality.
+
+### Encoded blob removal
+
+16 tokens removed across 3 papers (GenCast SVG glyph data, JWT segments,
+one URL query fragment). Verified by re-extracting all 130 PDFs and reading
+the complete removal log; see `results/tables/blob_strip_audit.csv` and
+`scripts/verify_blob_strip.py`.
+
+One known false positive: `2008.08626v2` loses a URL query fragment
+(`ots=...&sig=...`) that is not encoded data. It has no domain, so the URL
+exemption cannot see it, and widening the exemption would start letting
+real blobs through. Retrieval value is zero; left in place deliberately.

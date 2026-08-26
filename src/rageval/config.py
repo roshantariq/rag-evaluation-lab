@@ -27,6 +27,8 @@ CORPUS_MANIFEST = EVAL_DIR / "corpus_manifest.jsonl"
 CHROMA_DIR = PROJECT_ROOT / "chroma_db"
 EMBED_CACHE = PROJECT_ROOT / ".cache" / "embeddings.sqlite"
 
+RESPONSE_CACHE = PROJECT_ROOT / ".cache" / "responses.sqlite"
+
 def ensure_dirs() -> None:
     for d in (RAW_DIR, INTERIM_DIR, EVAL_DIR, TABLES_DIR, FIGURES_DIR):
         d.mkdir(parents=True, exist_ok=True)
