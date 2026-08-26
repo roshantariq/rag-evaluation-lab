@@ -61,6 +61,26 @@ class TestAbstentionDetection:
     def test_mid_answer_mention_not_flagged(self):
         assert not detect_abstention("The context is insufficient context here, but [1] says X.")
 
+    def test_prose_refusal_from_naive_prompt_is_detected(self):
+        # Observed verbatim from gpt-4o-mini under the naive prompt.
+        assert detect_abstention(
+            "The provided context passages do not contain any information regarding "
+            "the RMSE of the ECMWF IFS model in 1987. Therefore, I cannot provide an answer."
+        )
+
+    def test_answer_that_notes_a_gap_is_not_an_abstention(self):
+        assert not detect_abstention(
+            "GraphCast uses a multi-mesh graph [1]. The exact node count is not stated, "
+            "but the paper reports six refinement levels [2]."
+        )
+
+    def test_hedged_answer_with_citations_is_not_an_abstention(self):
+        # "does not specify X, but [2] says Y" is an answer with a caveat.
+        assert not detect_abstention(
+            "The context does not specify the batch size, but FengWu used "
+            "AdamW with cosine annealing [2]."
+        )
+
 
 class TestPromptStrategies:
     def test_naive_omits_the_abstention_instruction(self):

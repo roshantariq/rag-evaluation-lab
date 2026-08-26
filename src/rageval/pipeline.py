@@ -68,10 +68,35 @@ def parse_citations(answer: str, n_hits: int) -> list[int]:
     return out
 
 
-def detect_abstention(answer: str) -> bool:
-    stripped = answer.strip().strip('".')
-    return stripped.upper().startswith(ABSTENTION_SENTINEL)
+# Refusal phrasings observed from gpt-4o-mini. Necessary because the naive
+# prompt has no sentinel: it refuses in prose, and scoring that as a
+# hallucination would turn a formatting difference into a fake finding.
+_REFUSAL = re.compile(
+    r"(?:do(?:es)?\s+not\s+(?:contain|include|provide|mention|specify))"
+    r"|(?:cannot|can't|can not|unable to)\s+(?:provide|answer|determine|find|be\s+(?:answered|determined))"
+    r"|(?:no\s+(?:information|mention|data|details?)\s+(?:about|regarding|on|for|in))"
+    r"|(?:not\s+(?:mentioned|specified|stated|provided|available|present)\s+in\s+the\s+(?:context|passages?|provided))"
+    r"|(?:insufficient\s+(?:context|information))",
+    re.IGNORECASE,
+)
 
+
+def detect_abstention(answer: str) -> bool:
+    """True when the model declined to answer, sentinel or prose.
+
+    Regex is a first pass, not the final word. At Phase 7 scale (16
+    unanswerable questions x 3 strategies = 48 answers) every label is
+    hand-verified; the regex exists to make that review fast.
+    """
+    stripped = answer.strip().strip('".')
+    if stripped.upper().startswith(ABSTENTION_SENTINEL):
+        return True
+    if not _REFUSAL.search(answer):
+        return False
+    # A cited answer is drawing on the context, not declining it. Refusal
+    # language alongside citations is a hedge on a real answer, and scoring
+    # it as abstention would understate the hallucination rate.
+    return not _CITATION.search(answer)
 
 class RAGPipeline:
     def __init__(self, store, encoder, llm, k: int = 5, strategy: str = "abstain"):

@@ -316,6 +316,52 @@ Retrieval for metric-name queries returns chart axis labels. Left broken:
 the baseline exists to be beaten, and this is the motivating example for
 the Phase 6 chunk-filter ablation.
 
+### Defect found: abstention measurement counted formatting as behaviour
+
+The first live test of the abstention pair asked "what was the RMSE of the
+ECMWF IFS model in 1987" — a fact absent from a 2015–2026 corpus.
+
+    naive:   "The provided context passages do not contain any information
+              regarding the RMSE of the ECMWF IFS model in 1987. Therefore,
+              I cannot provide an answer."
+    abstain: INSUFFICIENT CONTEXT
+
+Both refused. But `detect_abstention` matched only the sentinel string, so
+the naive response was recorded as `abstained=False`. Had Phase 7 computed
+hallucination rate as "did not abstain", the naive arm would have scored as
+hallucinating on a question it correctly refused — turning a pure output
+formatting difference into a large, entirely fictitious finding.
+
+*Resolution.* Detection now covers prose refusals as well as the sentinel:
+7 of 7 observed refusal phrasings caught, 0 of 5 real answers misflagged,
+including an answer that supplies content while noting a gap. The regex is
+explicitly a first pass — at Phase 7 scale (16 unanswerable questions x 3
+strategies = 48 answers) every label is hand-verified.
+
+### Risk raised: the headline finding may be small
+
+Both prompt strategies refused the test question, so the abstention
+instruction changed nothing but format at n=1.
+
+That test is confounded — the question was trivially unanswerable, which is
+the exact failure mode listed in the risk register. It is therefore not
+evidence the effect is absent. It *is* evidence the effect is harder to
+elicit than the plan assumes: instruction-tuned models refuse far better
+than they did when "RAG hallucinates on unanswerable questions" became
+conventional wisdom.
+
+**Consequence for Phase 4.** Unanswerable questions must be *adjacent*, not
+absent: retrieval returns confident on-topic passages from the right paper,
+the question sounds exactly like something the corpus would answer, and the
+specific fact is simply not stated. "What batch size did FengWu use during
+fine-tuning?" rather than "what was the RMSE of IFS in 1987?". Absence must
+be verified by keyword search across `data/interim/`, never assumed.
+
+**Fallback headline.** If the abstention effect measures small, the Phase 6
+chunk-quality result leads instead: figure axis labels dominate retrieval
+for metric-name queries, and no surface feature separates them from results
+tables. Concrete, measured, and rarely reported.
+
 ---
 
 ## Plan amendments
