@@ -1,0 +1,21 @@
+corpus:
+  name: dl-weather-forecasting
+  target_size: 130
+  max_per_query: 40
+  earliest_year: 2015
+  inter_query_pause: 8.0
+  categories:
+    - physics.ao-ph
+    - cs.LG
+    - cs.CV
+    - stat.ML
+  queries:
+    - 'abs:"precipitation nowcasting"'
+    - 'abs:"radar echo extrapolation"'
+    - 'abs:"weather forecasting" AND abs:"deep learning"'
+    - 'abs:"numerical weather prediction" AND abs:"neural network"'
+    - 'abs:"data-driven weather" AND abs:forecast'
+    - 'abs:"medium-range" AND abs:"weather forecasting"'
+    - 'abs:ConvLSTM AND abs:forecast'
+    - 'abs:spatiotemporal AND abs:precipitation'
+    - 'abs:"climate model" AND abs:"machine learning" AND abs:emulation'

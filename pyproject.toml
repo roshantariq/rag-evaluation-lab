@@ -8,9 +8,14 @@ version = "0.1.0"
 requires-python = ">=3.11"
 dependencies = [
   "arxiv", "pymupdf", "pdfplumber",
-  "langchain", "langchain-community", "langchain-openai",
+  "langchain", "langchain-openai",
+  # Pinned: langchain-community 0.4.2 removed chat_models.vertexai,
+  # which ragas imports at module load. See docs/dependencies.md
+  "langchain-community==0.4.1",
   "chromadb", "sentence-transformers", "rank-bm25",
-  "openai", "ragas", "mlflow",
+  "openai", "ragas", "mlflow", "requests",
+  # Undeclared transitive dependency of ragas
+  "pillow",
   "pandas", "numpy", "matplotlib", "pyyaml",
   "python-dotenv", "tqdm", "pydantic>=2",
 ]
