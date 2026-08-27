@@ -13,3 +13,4 @@ mlruns/
 build/
 dist/
 .cache/
+ev.json

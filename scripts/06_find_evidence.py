@@ -65,7 +65,10 @@ def main() -> int:
     p.add_argument("--quote", required=True, help="A phrase from the passage.")
     p.add_argument("--context", type=int, default=200, help="Chars of surrounding text to show.")
     p.add_argument("--json", action="store_true",
-                   help="Print only the evidence block(s), for piping to Set-Clipboard.")
+                   help="Print only the evidence block(s).")
+    p.add_argument("--out", default=None, metavar="FILE",
+                   help="Write the evidence block(s) to FILE as UTF-8. Bypasses the "
+                        "console pipeline, which mangles non-ASCII on Windows.")
     p.add_argument("--extend", type=int, default=0,
                    help="Extend the span by N chars on both sides before snapping.")
     p.add_argument("--before", type=int, default=None,
@@ -104,14 +107,26 @@ def main() -> int:
         print("and check you are quoting the extraction rather than the PDF.")
         return 1
 
-    if args.json:
-        for start, end in spans:
-            print(json.dumps({
+    if args.json or args.out:
+        blocks = [
+            json.dumps({
                 "arxiv_id": args.paper,
                 "char_start": start,
                 "char_end": end,
                 "quote": " ".join(text[start:end].split()),
-            }, ensure_ascii=False))
+            }, ensure_ascii=False)
+            for start, end in spans
+        ]
+        if args.out:
+            # Written straight from Python so PowerShell never touches the
+            # bytes. Piping through the console re-encodes as cp1252 on
+            # Windows and silently corrupts every non-ASCII character.
+            with open(args.out, "w", encoding="utf-8") as fh:
+                fh.write("\n".join(blocks) + "\n")
+            print(f"{len(blocks)} block(s) -> {args.out}")
+        else:
+            for b in blocks:
+                print(b)
         return 0
 
     print(f"\n{args.paper}  {title[:64]}")
