@@ -3,8 +3,9 @@
 Running record of decisions, defects and measured results. Phase numbering
 follows the build plan. Newest phase last.
 
-**Status:** Phases 0–2 complete and extraction frozen. Phase 3 (baseline
-system) built through retrieval and generation; Phase 4 (gold set) next.
+**Status:** Phases 0–3 complete; extraction and `data/interim/` frozen.
+Phase 4 (gold set) in progress: 34 of 74 questions authored, factual and
+comparative complete.t.
 
 ---
 
@@ -363,6 +364,126 @@ for metric-name queries, and no surface feature separates them from results
 tables. Concrete, measured, and rarely reported.
 
 ---
+
+## Phase 4 — Gold evaluation set
+
+**In progress.** 34 questions authored and valid, spanning 12 of 130 papers.
+
+| Type | Have | Target |
+|---|---|---|
+| factual | 20 | 20 |
+| comparative | 14 | 14 |
+| multi_hop | 0 | 18 |
+| unanswerable | 0 | 16 |
+| ambiguous | 0 | 6 |
+
+Coverage of 12 papers is by design, not a shortfall. The remaining 118 are
+the distractor set; concentrating evidence in a few papers is what makes
+retrieval failures visible.
+
+### Design decisions
+
+**Reference answers must be derivable from the evidence spans alone.** One
+early answer (f019) was filled in from an outside web source. Rejected and
+rewritten. If a reference answer contains facts absent from its evidence,
+a system that retrieves perfectly and answers faithfully still scores
+wrong, and the answerable/unanswerable boundary that the headline finding
+depends on stops being sharp.
+
+**Authoring runs through tools, never the console.** The chain is
+`04_search.py` to find candidate passages, `06_find_evidence.py` to convert
+a quoted phrase into an exact character span, `09_add_question.py` to fetch
+the quote from the frozen extraction itself, validate, and write. The only
+thing typed by hand is a pair of integers.
+
+**Questions are sorted by id on write.** File content depends only on what
+is in the set, not on the order it was authored, so re-running the tool
+produces identical bytes and diffs show real changes rather than shuffled
+lines. This is why `c*` ids sort above `f*`.
+
+### Defects found
+
+**Console round-trips corrupted quotes.** Piping tool output on Windows
+raised `UnicodeEncodeError` under cp1252, and — worse — silently mangled
+non-ASCII mathematical characters when quotes were copied through the
+terminal into the JSONL. Initially misdiagnosed as a display artifact. It
+was real; the file had to be rebuilt.
+
+*Resolution.* `sys.stdout.reconfigure(encoding="utf-8")`, then `--out` for
+file delivery, then superseded entirely by `09_add_question.py`, which
+never moves a quote through the console.
+
+**`--out` left a stale file when a lookup failed.** `06_find_evidence.py`
+returned early on no match without removing its previous output, so the
+last run's file stayed in place and read as a successful result. Three
+comparative questions (c006–c008) were written with xLSTM evidence
+attached to GraphCast/FuXi questions. Mechanical validation passed: the
+spans and quotes were internally consistent, just from the wrong paper.
+
+*Resolution.* Unlink the output path before the lookup. The escape was
+caught in review by `papers covered` dropping from 6 to 5 — a free
+integrity signal that wrong-paper evidence usually trips.
+
+**"Valid but wrong" evidence recurred.** f009, f015, f019, c002, c006–c008:
+spans that validate mechanically, with quotes matching source exactly, but
+that do not support the answer. No mechanical check can detect this, since
+the failure is semantic.
+
+*Resolution.* Per-question manual review, backed by the `papers covered`
+count. There is no automated fix.
+
+**A question duplicated one already in the set.** c009 as first drafted
+asked how FuXi and GenCast step the forecast forward in time; c006 already
+asked how GraphCast and FuXi extend forecasts to longer lead times, and the
+FuXi half of both answers was the same fact. Drafted without the existing
+comparatives in view.
+
+The cost is larger than redundancy. Near-duplicate questions correlate
+their errors, so the effective sample size is smaller than the count — and
+the set is only 74 questions with small ablation deltas expected.
+
+*Resolution.* Replaced via `09_add_question.py --replace` with a contrast
+between MoWE's learned per-grid-point expert gating and the multi-model
+ensemble of `2403.15598v1`. Standing check: read the existing questions of
+a type before drafting a new one.
+
+### Layered defence
+
+Each layer was added after a real escape, not in anticipation of one:
+
+1. `08_validate_gold.py` — span and quote mechanical check
+2. `papers covered` count — catches wrong-paper evidence
+3. `06_find_evidence.py` stale-file deletion — catches silent reuse of a
+   previous lookup
+4. `09_add_question.py` — removes hand-copying entirely
+5. Manual review against the existing set — catches valid-but-wrong
+   evidence and redundancy
+
+### Measured retrieval failures recorded during authoring
+
+Authoring doubles as unstructured retrieval testing. Three failures found
+so far, all to be quantified in Phase 6:
+
+- "fraction skill score" returns chart axis labels, not definitions
+- a query for the balanced loss (B-MSE / B-MAE) at k=8 returns nothing
+  from the paper that introduced it
+- a query about ConvLSTM's mechanism returns mostly the paper critiquing it
+- generic metric vocabulary ("evaluation metrics CSI HSS RMSE CRPS
+  scorecard") returns axis labels and tables of contents, because those
+  artifacts are made of exactly that vocabulary
+
+### Open decision, deferred to before Phase 6
+
+With 74 questions, small ablation deltas are likely noise. Decide whether
+to report confidence intervals, or to split the gold set and require the
+winning configuration to hold on both halves.
+
+### Standing lesson
+
+Every corruption in this phase entered through a human copying text. The
+fix was not more careful copying but removing the copy: the authoring tool
+reads quotes from the frozen extraction itself, and the only thing typed
+by hand is a pair of integers, which cannot be silently mangled.
 
 ## Plan amendments
 
