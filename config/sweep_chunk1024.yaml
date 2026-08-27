@@ -1,0 +1,19 @@
+# Ablation: chunk size, the other direction. If truncation were the whole
+# story this should be clearly worse than 512; if it is not, chunk size is
+# not what limits this retriever.
+chunking:
+  strategy: fixed_1024
+  target_tokens: 1024
+  overlap_tokens: 0
+embedding:
+  model: sentence-transformers/all-MiniLM-L6-v2
+index:
+  collection: sweep_fixed1024_minilm
+retrieval:
+  k: 5
+generation:
+  provider: openai
+  model: gpt-4o-mini
+  temperature: 0.0
+  max_tokens: 700
+  prompt_strategy: abstain

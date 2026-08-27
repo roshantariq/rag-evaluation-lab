@@ -1,0 +1,23 @@
+# Ablation: chunk size. Everything except chunking matches baseline.yaml.
+#
+# 256 target tokens is chosen to sit under all-MiniLM-L6-v2's 256 word-piece
+# limit. The token counter here is tiktoken cl100k, not word-piece, so the
+# two do not correspond exactly - run scripts/11_diagnose_truncation.py
+# against this config to confirm how much text actually reaches the encoder.
+# The baseline figure to beat is 53.1%.
+chunking:
+  strategy: fixed_256
+  target_tokens: 256
+  overlap_tokens: 0
+embedding:
+  model: sentence-transformers/all-MiniLM-L6-v2
+index:
+  collection: sweep_fixed256_minilm
+retrieval:
+  k: 5
+generation:
+  provider: openai
+  model: gpt-4o-mini
+  temperature: 0.0
+  max_tokens: 700
+  prompt_strategy: abstain
