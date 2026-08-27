@@ -1069,6 +1069,51 @@ the extracted text; a chunk is relevant if its span overlaps.
 meaningful against this exact extractor output. Any later change to
 extraction invalidates every span in the gold set.
 
+**The experiment matrix was circular.** As written, the chunking sweep held
+retrieval at "hybrid" while the retrieval sweep held chunking at "the
+winning chunker". Neither can run first. This is not a scheduling
+inconvenience: with the axes defined in terms of each other, the reported
+best configuration would depend on an ordering the plan never states, and
+so could not be reproduced from the plan.
+
+*Resolution.* Name the seed explicitly and fix the order.
+
+    seed:  fixed_512 / all-MiniLM-L6-v2 / dense-only / k=10
+    order: chunking -> retrieval -> reranking -> k -> embedding model
+
+Each sweep varies one axis with all others held at the seed, except that a
+sweep inherits any change from an earlier sweep that cleared the switching
+rule. Sweep 1 cleared nothing, so sweep 2 runs on the untouched seed.
+
+*Limitation, recorded rather than solved.* This is a greedy coordinate
+search, so the result is order-dependent: a chunking that only pays off
+under hybrid retrieval will be rejected in sweep 1 and never revisited on
+its own. That sits alongside the interaction blindness the plan already
+admits. The end-of-phase replication run (winning pipeline × {512, 256}) is
+a partial check on exactly this and is the only interaction actually
+measured.
+
+**Phase 4's open decision is resolved: confidence intervals plus selection
+stability, not a held-out split.** The Phase 4 log deferred a choice between
+reporting CIs and splitting the gold set so a winner must hold on both
+halves. A permanent holdout is the wrong instrument at n=58: a 30% holdout
+is 17 questions, whose CI on recall is roughly ±0.12 — too wide to separate
+any configuration from any other. That trades a third of the gold set for a
+number that says nothing. Repeated stratified half-splits
+(`15_selection_stability.py`) use every question in both roles across
+thousands of draws instead, and report the two things a holdout was wanted
+for: how often each configuration is selected, and how inflated the
+selected one's score is.
+
+**Switching rule, pre-registered.** A configuration replaces the baseline
+only when its paired CI excludes zero **and** its half-split win rate is
+decisively above chance. When either fails, the baseline carries forward and
+the sweep is written up as a null result. Applied to sweep 1 this keeps
+`fixed_512` despite `fixed_256` leading at every character budget.
+
+**`fixed_128` removed from the chunking sweep.** Underpowered by
+construction once 256 and 512 proved indistinguishable at this sample size.
+
 ---
 
 ## Open items
