@@ -3,9 +3,9 @@
 Running record of decisions, defects and measured results. Phase numbering
 follows the build plan. Newest phase last.
 
-**Status:** Phases 0–4 complete; extraction and `data/interim/` frozen,
-gold set closed at 74 questions across five types. Phase 5 (retrieval
-metrics harness) next.
+**Status:** Phases 0–5 complete. Gold set closed at 74 questions; retrieval
+baseline measured against a known ceiling (oracle 0.911, question 0.436 at
+span level, k=10). Phase 6 (ablations) next.
 
 ---
 
@@ -580,6 +580,214 @@ hand is a pair of integers, which cannot be silently mangled.
 And: check what is actually in the corpus before designing around it. Two
 rounds of chain-hunting were wasted on models the corpus discusses
 constantly but does not contain.
+
+---
+
+## Phase 5 — Retrieval metrics harness and baseline
+
+**Done.** Metrics module, 28 tests, harness, two diagnostic scripts. The
+baseline is measured and its ceiling is known.
+
+### What was built
+
+`src/rageval/evaluation/retrieval_metrics.py` scores retrieval by
+character-span overlap, with no dependency on the retriever, the vector
+store or pandas, so every metric is testable against hand-computed cases
+without building an index. `scripts/10_eval_retrieval.py` runs it.
+`scripts/11_diagnose_truncation.py` and `scripts/12_oracle_query.py` are
+diagnostics, described below.
+
+### Design decisions
+
+**Two recall-style measures, not one.**
+
+    Recall@k    was ANY evidence span retrieved
+    Coverage@k  what FRACTION of them were
+
+They are identical for single-evidence questions and diverge on the rest.
+Coverage is reported as a fraction rather than a flag so a two-span
+question that finds one span reads as half-solved rather than failed.
+
+**Unanswerable questions are excluded, not zeroed.** They carry no
+evidence, so 16 rows of 0.0 would read as 16 retrieval failures. They are
+marked `scorable: False` with no metric keys at all, and are scored in the
+generation phase instead.
+
+**nDCG takes the true relevant-chunk count.** Without it, the ideal ranking
+is inferred from what was actually retrieved, which flatters a run that
+retrieved nothing. The harness counts, per question, how many chunks in the
+index overlap its evidence. That number is diagnostic in its own right:
+min 1, median 3, max 6 out of 2,938 chunks, which confirms the evidence
+spans are tight rather than sprawling. An earlier worry that
+chunk-sized spans would make any chunker look good does not apply.
+
+**Which span was hit, not just how many.** For multi_hop, `evidence[0]` is
+the source paper carrying the referring sentence and `evidence[1]` is the
+terminal paper holding the answer, so the per-k `hit_spans` column
+distinguishes "the chain broke" from "the chain broke at the first hop".
+
+### Baseline results
+
+Fixed 512-token chunks, no overlap, `all-MiniLM-L6-v2`, ChromaDB cosine.
+58 scorable questions, 101 evidence spans.
+
+| | @1 | @3 | @5 | @10 | @20 |
+|---|---|---|---|---|---|
+| Recall | 0.190 | 0.448 | 0.552 | 0.655 | 0.759 |
+| Coverage | 0.121 | 0.322 | 0.382 | 0.494 | 0.598 |
+| nDCG | 0.190 | 0.219 | 0.241 | 0.276 | 0.312 |
+
+MRR 0.348.
+
+| type | n | R@5 | R@10 | Cov@5 | Cov@10 | nDCG@10 | MRR |
+|---|---|---|---|---|---|---|---|
+| factual | 20 | 0.600 | 0.700 | 0.600 | 0.700 | 0.397 | 0.359 |
+| comparative | 14 | 0.571 | 0.643 | 0.286 | 0.464 | 0.245 | 0.359 |
+| multi_hop | 18 | 0.611 | 0.778 | 0.306 | 0.417 | 0.242 | 0.418 |
+| ambiguous | 6 | 0.167 | 0.167 | 0.111 | 0.111 | 0.050 | 0.076 |
+
+24% of answerable questions (14 of 58) retrieve nothing relevant in twenty
+results.
+
+### The result that survives scrutiny
+
+**Both spans retrieved, by cutoff:**
+
+| | k=5 | k=10 | k=20 |
+|---|---|---|---|
+| multi_hop (n=18) | 0 | 1 | 4 |
+| comparative (n=14) | 0 | 4 | 4 |
+
+**Zero of 32 two-span questions had both passages retrieved at k=5.** This
+does not depend on which half was missed, on evidence ordering, or on
+authoring habits.
+
+It lands directly on Phase 7: if generation receives top-5 chunks, every
+multi-evidence question in the gold set is unanswerable before the model
+sees anything, and a hallucination measured there would be a retrieval
+artifact wearing a generation costume. Generation must be fed a larger k
+than the retrieval baseline uses, and the k it is fed must be reported.
+
+### The ceiling
+
+`scripts/12_oracle_query.py` queries the index with each evidence span's
+own quoted text, removing the question from the loop.
+
+| | span-level @10 |
+|---|---|
+| reachable by its own text | 0.911 |
+| reachable from the question | 0.436 |
+| gap | 0.475 |
+
+oracle@1 is 0.693 and the median rank when found is 1. Comparative spans
+reach 1.000 at k=10. Of 101 spans, 51 are findable by their own text but
+missed from the question; only 6 are unreachable by either.
+
+**The index is sound.** Chunking, embedding, storage and scoring all work.
+The entire baseline gap is question-to-passage semantic matching.
+
+Every ablation from here is reported against this ceiling. "Hybrid
+retrieval moved Recall@10 from 0.44 to 0.61" is a number; "it closed 36% of
+the measured gap to the ceiling" is a result.
+
+### Three hypotheses, three failures
+
+Recorded with their predictions intact, because the pattern matters more
+than any one of them.
+
+**1. Referring sentences are invisible to dense retrieval.** Queries
+phrased as citation language scored 0.37–0.38, barely above noise, so the
+prediction was that multi_hop Recall@k would fall well below factual.
+
+*Falsified.* multi_hop R@10 was 0.778, the **highest** of any type, against
+factual 0.700.
+
+*And the comparison was confounded anyway.* Factual questions have one
+evidence span; comparative and multi_hop have two. Recall@k asks whether
+any span was found, so two spans means two chances. Cross-type Recall
+comparison is mechanically biased toward multi-evidence questions.
+**Coverage is the only fair cross-type comparison**, and by that measure
+multi_hop is worst (0.417 against factual 0.700).
+
+**2. The missing hop is systematically the referring one.** Prediction:
+"second only" — answer found, referring sentence never — should dominate.
+
+*Falsified in direction.* At k=20 the split was first only 7, second only
+3. And it is uninformative regardless: a multi_hop question must describe
+its first hop and withhold its second, or it is not multi_hop, so the query
+paraphrases span 0 by construction. The split largely measures how the
+questions were written. The comparative control, where span order carries
+no meaning, leans the same way (4 versus 2), and 7-versus-3 on ten cases is
+a two-sided binomial p of about 0.17.
+
+**3. Encoder truncation is the root cause.** `all-MiniLM-L6-v2` accepts 256
+tokens; chunks target 512, median 2,113 characters. Measured: **53.1% of
+chunk text never reaches the encoder.** Prediction: visible spans hit,
+cut-off spans do not.
+
+*Falsified.* **42 of 57 missed spans are fully visible.** Mean visible
+fraction 0.934 for hits against 0.850 for misses, both medians 1.000. Only
+6 spans are entirely cut and 11 majority-cut. The mechanism is real; it is
+not the cause.
+
+**A fourth, tested and dropped before it became a hypothesis: signal
+dilution** — a short fact diluted inside a large chunk. Mean signal ratio
+(span length over embedded chunk text) was 0.733 for hits and 0.732 for
+misses, and the quartile hit rates were non-monotonic
+(0.333 / 0.458 / 0.696 / 0.292). No effect.
+
+The only real correlate found: spans covered by two chunks hit 50% of the
+time against 33% for one chunk. Two lottery tickets beat one.
+
+### The premise was wrong
+
+The investigation started from "factual Recall@10 of 0.700 is anomalously
+low for questions authored from their own target passage." That premise was
+never checked. A 22M-parameter general-purpose sentence model applied to
+dense technical prose full of equations and notation is plausibly just this
+weak; published numbers for models of this size sit around 0.6–0.8 on far
+easier corpora. **A weak baseline is not a broken one**, and three
+hypotheses were built on assuming otherwise.
+
+### Truncation, recorded as a defect rather than a cause
+
+53.1% of chunk text is never embedded. It did not explain the misses, but
+it caps the ceiling, and half the corpus is effectively unindexed. It
+belongs in the Phase 6 chunk-size ablation with that framing.
+
+**It also creates a confound Phase 6 must control**: comparing embedding
+models at 512-token chunking would confound model quality with each model's
+context window, and any model with a longer window would win for reasons
+unrelated to embedding quality. Either hold chunk size below every
+candidate model's limit, or report the interaction explicitly.
+
+### Six unreachable spans
+
+Not retrieved even by their own text. Two are the *same* WeatherBench span
+(837 characters) failing under both `a003` and `m006`. One, `m007` span 1,
+is the longest quote in the set at 1,822 characters — past the 256-token
+window, so the oracle query is itself truncated. That is the oracle being
+imperfect rather than the index failing. The remaining three are worth a
+hand check before Phase 6.
+
+### A prediction for Phase 6, made in advance
+
+If the bottleneck is question-to-passage matching, the query-side axes
+(embedding model, hybrid BM25, query rewriting) should move the numbers
+substantially and the chunking axes should move them much less. If chunk
+size dominates instead, this prediction is wrong and the build log will say
+so. It is recorded here, before the ablations run, so it cannot be
+reverse-engineered afterwards.
+
+### Standing lesson
+
+Two mechanisms were inferred from aggregate patterns and both came out
+backwards. What resolved the question was a test designed to
+*discriminate* — query the index with the answer text and see whether the
+target is reachable at all — rather than one designed to confirm. An
+aggregate can tell you that something is wrong; it almost never tells you
+what, and a plausible mechanism that fits the aggregate is not evidence.
+Run the test whose two outcomes point in opposite directions.
 
 ---
 
