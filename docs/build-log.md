@@ -3,9 +3,9 @@
 Running record of decisions, defects and measured results. Phase numbering
 follows the build plan. Newest phase last.
 
-**Status:** Phases 0–3 complete; extraction and `data/interim/` frozen.
-Phase 4 (gold set) in progress: 34 of 74 questions authored, factual and
-comparative complete.t.
+**Status:** Phases 0–4 complete; extraction and `data/interim/` frozen,
+gold set closed at 74 questions across five types. Phase 5 (retrieval
+metrics harness) next.
 
 ---
 
@@ -367,85 +367,142 @@ tables. Concrete, measured, and rarely reported.
 
 ## Phase 4 — Gold evaluation set
 
-**In progress.** 34 questions authored and valid, spanning 12 of 130 papers.
+**Done.** 74 questions, all valid, spanning 33 of 130 papers.
 
-| Type | Have | Target |
+| Type | Count | Target |
 |---|---|---|
 | factual | 20 | 20 |
 | comparative | 14 | 14 |
-| multi_hop | 0 | 18 |
-| unanswerable | 0 | 16 |
-| ambiguous | 0 | 6 |
+| multi_hop | 18 | 18 |
+| unanswerable | 16 | 16 |
+| ambiguous | 6 | 6 |
 
-Coverage of 12 papers is by design, not a shortfall. The remaining 118 are
-the distractor set; concentrating evidence in a few papers is what makes
-retrieval failures visible.
+Coverage of 33 papers is by design. The remaining 97 are the distractor
+set; concentrating evidence in a subset is what makes retrieval failures
+visible.
 
 ### Design decisions
 
 **Reference answers must be derivable from the evidence spans alone.** One
 early answer (f019) was filled in from an outside web source. Rejected and
-rewritten. If a reference answer contains facts absent from its evidence,
-a system that retrieves perfectly and answers faithfully still scores
-wrong, and the answerable/unanswerable boundary that the headline finding
-depends on stops being sharp.
+rewritten. If a reference answer contains facts absent from its evidence, a
+system that retrieves perfectly and answers faithfully still scores wrong,
+and the answerable/unanswerable boundary that the headline finding depends
+on stops being sharp.
 
-**Authoring runs through tools, never the console.** The chain is
-`04_search.py` to find candidate passages, `06_find_evidence.py` to convert
-a quoted phrase into an exact character span, `09_add_question.py` to fetch
-the quote from the frozen extraction itself, validate, and write. The only
-thing typed by hand is a pair of integers.
+**Authoring runs through tools, never the console.** `04_search.py` finds
+candidate passages, `06_find_evidence.py` converts a quoted phrase into an
+exact character span, `09_add_question.py` fetches the quote from the
+frozen extraction itself, validates, and writes. The only thing typed by
+hand is a pair of integers.
 
 **Questions are sorted by id on write.** File content depends only on what
-is in the set, not on the order it was authored, so re-running the tool
-produces identical bytes and diffs show real changes rather than shuffled
-lines. This is why `c*` ids sort above `f*`.
+is in the set, not the order it was authored, so re-running the tool
+produces identical bytes and diffs show real changes.
+
+### Construction notes by question type
+
+**Unanswerable — adjacency, not absence.** A question is useless if it is
+trivially outside the corpus. Each of the sixteen is built so retrieval
+returns confident, on-topic passages while the specific fact is missing.
+The strongest is u008: WeatherBench 2 lists SEEPS as a headline score *and*
+lists FuXi in its model table, but never reports a SEEPS value for FuXi —
+both halves present, only the intersection absent.
+
+Absence is judged against `data/interim/`, not the source PDF. The system
+can only answer from what is indexed, so a figure lost in extraction is
+genuinely absent from the system's world. WeatherBench 2's Table 1 makes
+this concrete for u001: it has an explicit "Inference time" column, filled
+for Pangu-Weather and GraphCast, empty for FuXi.
+
+Four candidates were killed by checking:
+
+- *FuXi GPU hours* — stated outright ("approximately 30 hours on a cluster
+  of 8 Nvidia A100 GPUs"), and again second-hand in two other papers.
+- *FuXi-Extreme on cyclone tracks* — a full IBTrACS evaluation section.
+- *GraphCast's CRPS* — GraphCast itself reports none, but GenCast reports
+  CRPS scorecards for GraphCast-Perturbed across dozens of passages. The
+  boundary was not sharp enough to keep.
+- *GraphCast's learning rate* — `2501.19374v2` gives peak and terminal
+  learning rates for a fine-tuned GraphCast and states its hyperparameters
+  were identical to Lam et al. Same ambiguity.
+
+**Multi-hop — chains collapse more often than they hold.** Papers in this
+corpus almost always restate the detail they borrow; a citation usually
+arrives with a summary attached. A chain survives only when the citing
+paper *uses* something without explaining it, and the terminal fact is a
+mechanism, a rationale or an admission rather than a value. Values get
+restated; reasons do not. Chains abandoned for collapse include Aardvark →
+WeatherBench 2 (Aardvark spells out the climatology computation itself),
+FuXi-RTM → FuXi (its section 3.2 describes FuXi), and the first draft of
+FuXi → GraphCast (FuXi's own span already gives the 2-to-12 step range, so
+the question had to be re-aimed at the gradient-update count).
+
+**A correlation rule, corrected mid-phase.** Two multi-hop questions fail
+together when they share a *first* hop — the referring sentence is the hard
+retrieval. The terminal paper matters much less. Applying the rule to
+terminals instead was making usable chains look unusable; four chains
+terminate in ConvLSTM (m003, m009, m013, m015) on four distinct facts —
+structure, parameter counts, boundary padding, kernel size — from four
+unrelated source papers, one of which is outside weather entirely.
+
+**Five heavily-cited models have no paper in the corpus:** FengWu,
+FourCastNet, NowcastNet, SwinVRNN, DiffCast. Search results look like
+chains right up to the point of anchoring the second hop. Two rounds were
+spent probing FengWu before dumping the manifest; every chain is now
+checked against it before a lookup is spent.
+
+**Ambiguous — built on real disagreements, not vagueness.** a001 asks how
+long FuXi took to train: its own paper says ~30 hours of pre-training plus
+~two days per cascaded model, while WeatherBench 2's table says ~8 days,
+and those do not obviously reconcile. a004 exploits the FuXi family (FuXi,
+FuXi-Extreme, FuXi Weather, FuXi-RTM) having different horizons. a005 is
+ambiguous by variable alone: FuXi extends skillful lead time to 14.5 days
+for T2M but 10.5 days for Z500.
 
 ### Defects found
 
 **Console round-trips corrupted quotes.** Piping tool output on Windows
-raised `UnicodeEncodeError` under cp1252, and — worse — silently mangled
-non-ASCII mathematical characters when quotes were copied through the
-terminal into the JSONL. Initially misdiagnosed as a display artifact. It
-was real; the file had to be rebuilt.
+raised `UnicodeEncodeError` under cp1252 and silently mangled non-ASCII
+mathematical characters when quotes were copied through the terminal.
+Initially misdiagnosed as a display artifact. It was real; the file had to
+be rebuilt.
 
 *Resolution.* `sys.stdout.reconfigure(encoding="utf-8")`, then `--out` for
-file delivery, then superseded entirely by `09_add_question.py`, which
-never moves a quote through the console.
+file delivery, then superseded entirely by `09_add_question.py`.
 
 **`--out` left a stale file when a lookup failed.** `06_find_evidence.py`
 returned early on no match without removing its previous output, so the
 last run's file stayed in place and read as a successful result. Three
-comparative questions (c006–c008) were written with xLSTM evidence
-attached to GraphCast/FuXi questions. Mechanical validation passed: the
-spans and quotes were internally consistent, just from the wrong paper.
+comparative questions (c006–c008) were written with xLSTM evidence attached
+to GraphCast/FuXi questions. Mechanical validation passed: spans and quotes
+were internally consistent, just from the wrong paper.
 
-*Resolution.* Unlink the output path before the lookup. The escape was
-caught in review by `papers covered` dropping from 6 to 5 — a free
-integrity signal that wrong-paper evidence usually trips.
+*Resolution.* Unlink the output path before the lookup. Caught in review by
+`papers covered` dropping from 6 to 5.
 
 **"Valid but wrong" evidence recurred.** f009, f015, f019, c002, c006–c008:
-spans that validate mechanically, with quotes matching source exactly, but
-that do not support the answer. No mechanical check can detect this, since
-the failure is semantic.
+spans that validate mechanically, quotes matching source exactly, that do
+not support the answer. The failure is semantic; no mechanical check
+detects it.
 
 *Resolution.* Per-question manual review, backed by the `papers covered`
 count. There is no automated fix.
 
 **A question duplicated one already in the set.** c009 as first drafted
-asked how FuXi and GenCast step the forecast forward in time; c006 already
-asked how GraphCast and FuXi extend forecasts to longer lead times, and the
-FuXi half of both answers was the same fact. Drafted without the existing
-comparatives in view.
+asked how FuXi and GenCast step the forecast forward; c006 already asked how
+GraphCast and FuXi extend to longer lead times, and the FuXi half of both
+answers was the same fact. Near-duplicates correlate their errors, so
+effective sample size is smaller than the count — and the set is only 74
+questions with small ablation deltas expected.
 
-The cost is larger than redundancy. Near-duplicate questions correlate
-their errors, so the effective sample size is smaller than the count — and
-the set is only 74 questions with small ablation deltas expected.
+*Resolution.* Replaced via `--replace` with a MoWE contrast. Standing
+check: read the existing questions of a type before drafting a new one.
 
-*Resolution.* Replaced via `09_add_question.py --replace` with a contrast
-between MoWE's learned per-grid-point expert gating and the multi-model
-ensemble of `2403.15598v1`. Standing check: read the existing questions of
-a type before drafting a new one.
+**Extraction artifacts break quote lookups.** Line-break joins drop spaces
+and hyphens — the extracted text reads "datadriven", "namethe",
+"theprevious". Lookups must quote short fragments that avoid hyphenated
+compounds and word boundaries near line breaks.
 
 ### Layered defence
 
@@ -453,24 +510,59 @@ Each layer was added after a real escape, not in anticipation of one:
 
 1. `08_validate_gold.py` — span and quote mechanical check
 2. `papers covered` count — catches wrong-paper evidence
-3. `06_find_evidence.py` stale-file deletion — catches silent reuse of a
-   previous lookup
+3. `06_find_evidence.py` stale-file deletion — catches silent reuse
 4. `09_add_question.py` — removes hand-copying entirely
-5. Manual review against the existing set — catches valid-but-wrong
+5. `07_check_absence.py` — corpus-wide co-occurrence check for
+   unanswerable candidates, read by hand rather than trusted
+6. Manual review against the existing set — catches valid-but-wrong
    evidence and redundancy
 
-### Measured retrieval failures recorded during authoring
+### Measured retrieval failures found during authoring
 
-Authoring doubles as unstructured retrieval testing. Three failures found
-so far, all to be quantified in Phase 6:
+Authoring doubled as unstructured retrieval testing. Five failures, to be
+quantified in Phase 6:
 
-- "fraction skill score" returns chart axis labels, not definitions
-- a query for the balanced loss (B-MSE / B-MAE) at k=8 returns nothing
-  from the paper that introduced it
-- a query about ConvLSTM's mechanism returns mostly the paper critiquing it
-- generic metric vocabulary ("evaluation metrics CSI HSS RMSE CRPS
-  scorecard") returns axis labels and tables of contents, because those
-  artifacts are made of exactly that vocabulary
+1. **"fraction skill score" returns chart axis labels**, not definitions.
+2. **Generic metric vocabulary returns artifacts.** A query for
+   "evaluation metrics CSI HSS RMSE CRPS scorecard" returned GraphCast axis
+   labels at ranks 2, 4 and 5 and GenCast's table of contents — those
+   artifacts are made of exactly that vocabulary.
+3. **The balanced-loss query never finds the paper that introduced it.**
+   Three independent attempts to retrieve B-MSE/B-MAE returned WMAE/WMSE
+   from `2102.08175v1` and WSSIM from `2203.13263v1`, never TrajGRU.
+   Mechanism: the corpus holds several near-synonymous weighted-loss
+   formulations and the embedding cannot distinguish which paper
+   originated which. m016 deliberately terminates in that passage.
+4. **A query about ConvLSTM's mechanism returns mostly the paper that
+   critiques it.**
+5. **Referring sentences are effectively invisible to dense retrieval.**
+   Queries phrased as citation language ("we follow the training strategy
+   of", "our backbone is based on the architecture introduced in") scored
+   0.37–0.38, barely above noise, and returned topically unrelated papers.
+   The embedding keys on subject matter, not rhetorical structure.
+
+   This has a direct consequence for the project's thesis: multi-hop
+   questions depend on retrieving a referring sentence, so multi-hop
+   Recall@k should come out markedly worse than factual Recall@k — not
+   because the questions are harder to answer, but because the first hop
+   is a sentence type the retriever cannot see.
+
+### A factual error found in the corpus
+
+`2404.06668v1`, a review of large meteorological models, states that
+GraphCast forecasts "at a horizontal resolution of 0.25° across 13 vertical
+levels". GraphCast's own paper states 37. Thirteen is the count
+WeatherBench 2 lists for Pangu-Weather and FuXi. Recorded as m018, which
+tests whether a system prefers the primary source over a secondary summary
+that contradicts it.
+
+### Known confound
+
+The multi-hop questions are markedly harder to *construct* than any other
+type and nearly all are labelled `hard`, while the ambiguous and factual
+sets carry more `medium` and `easy` entries. If multi-hop Recall@k comes
+out low in Phase 6, this difficulty skew is a confound to acknowledge, not
+a finding to claim.
 
 ### Open decision, deferred to before Phase 6
 
@@ -478,12 +570,18 @@ With 74 questions, small ablation deltas are likely noise. Decide whether
 to report confidence intervals, or to split the gold set and require the
 winning configuration to hold on both halves.
 
-### Standing lesson
+### Standing lessons
 
 Every corruption in this phase entered through a human copying text. The
 fix was not more careful copying but removing the copy: the authoring tool
-reads quotes from the frozen extraction itself, and the only thing typed
-by hand is a pair of integers, which cannot be silently mangled.
+reads quotes from the frozen extraction itself, and the only thing typed by
+hand is a pair of integers, which cannot be silently mangled.
+
+And: check what is actually in the corpus before designing around it. Two
+rounds of chain-hunting were wasted on models the corpus discusses
+constantly but does not contain.
+
+---
 
 ## Plan amendments
 
