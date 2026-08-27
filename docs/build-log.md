@@ -3,9 +3,9 @@
 Running record of decisions, defects and measured results. Phase numbering
 follows the build plan. Newest phase last.
 
-**Status:** Phases 0–5 complete. Gold set closed at 74 questions; retrieval
-baseline measured against a known ceiling (oracle 0.911, question 0.436 at
-span level, k=10). Phase 6 (ablations) next.
+**Status:** Phases 0–5 complete. Phase 6 in progress: sweep 1 (chunk size)
+closed as a null result; baseline remains fixed-512. Selection rule and
+sweep order pre-registered. Sweep 2 (hybrid BM25 + RRF) next.
 
 ---
 
@@ -790,6 +790,270 @@ what, and a plausible mechanism that fits the aggregate is not evidence.
 Run the test whose two outcomes point in opposite directions.
 
 ---
+
+
+## Phase 6 — Ablations
+
+### Sweep 1 — chunk size
+
+Three configurations, identical in every other respect: fixed 256, 512
+(baseline) and 1024 token chunks, no overlap, `all-MiniLM-L6-v2`, ChromaDB
+cosine. Each writes to its own collection (`sweep_fixed256_minilm`,
+`sweep_fixed1024_minilm`) so a `store.reset()` cannot clobber the baseline.
+58 scorable questions, 101 evidence spans.
+
+Span-level recall, whole gold set:
+
+| configuration | k=10 | budget 10k | budget 20k | oracle ceiling @10 |
+|---|---|---|---|---|
+| fixed_256 | 0.347 | **0.337** | **0.455** | 0.960 |
+| fixed_512 (baseline) | **0.436** | 0.307 | 0.416 | 0.911 |
+| fixed_1024 | 0.416 | 0.168 | 0.287 | — |
+
+Paired tests at the 20k budget, McNemar exact on discordant span pairs with
+a cluster bootstrap over questions:
+
+| comparison | p | 95% CI on the difference |
+|---|---|---|
+| 512 vs 256 | 0.503 | [−0.040, +0.115] |
+| 512 vs 1024 | 0.004 | [−0.219, −0.045] |
+
+At fixed k=10 the sign reverses and 256 becomes the *worse* configuration
+(p = 0.078).
+
+**Result: null on chunk size.** 1024 is reliably worse at equal budget.
+Between 256 and 512 the difference is +0.039 in favour of 256 and the
+confidence interval straddles zero. The pre-registered rule — switch only
+when the paired CI excludes zero *and* selection is stable — says carry the
+baseline forward. **Baseline stays fixed-512.**
+
+### The finding: comparing chunk sizes at fixed k measures text volume
+
+The two metrics do not merely disagree about the margin; they invert the
+ranking, and the inversion is stable rather than noise. Across 4,000
+stratified half-splits (below), `fixed_1024` is selected 30.8% of the time
+at k=10 and **once in 4,000** at the 20k budget. `fixed_256` goes the other
+way, 1.9% to 84.4%.
+
+The mechanism is arithmetic. At the same k, 1024-token chunks hand the
+scorer roughly four times the characters that 256-token chunks do. Fixed-k
+therefore ranks chunkers largely by how much text they deliver, which is
+not a property anyone wants to select on — a generator is bounded by its
+context window, not by document count. This was the stated reason for
+building the character-budget metric in Phase 5; it is now measured rather
+than argued.
+
+**Scope of the confound.** It applies to comparisons that *change chunk
+size*. The remaining sweeps (hybrid BM25, reranking, k, embedding model)
+hold chunking fixed, so both arms hand over the same text at the same k and
+fixed-k is not confounded there. The character budget stays the primary
+reporting metric regardless, for comparability across the whole phase.
+
+### Selection stability
+
+`scripts/15_selection_stability.py`. Repeated stratified half-splits: split
+the 58 scorable questions in half keeping the 20/14/18/6 type mix, select
+the winner on one half, score it on the other, 2,000 splits × 2 directions.
+Ties are broken at random — taking the first configuration would quietly
+award every tie to whichever tag was typed first, and ties are 11–19% of
+selections at this sample size.
+
+This exists because Phase 6 scores ~17 configurations against one question
+set. Whatever comes out top is top partly because it suits *these*
+questions, and those questions are in the set every time. Reporting the
+winner's score then reports its luck along with its merit.
+
+| selection metric | winner | win rate | optimism | winner also wins held-out |
+|---|---|---|---|---|
+| budget 20k | fixed_256 | 84.4% | +0.018 | 74.8% |
+| budget 10k | fixed_256 | 74.6% | +0.026 | 57.1% |
+| k=10 | fixed_512 | 67.3% | +0.031 | 44.6% |
+
+**Win frequency is not a significance test**, and the two results are not in
+conflict. "Wins more often than not" is a much weaker claim than "differs by
+a detectable amount": a true difference of +0.039 with SE ≈ 0.040 predicts a
+half-split win rate near 75%, so 84.4% is what a small, positive,
+unresolved difference looks like. Both numbers describe the same
+undecidable gap.
+
+Two observations do favour 256 and are recorded for later: its optimism
+when selected is only **+0.010**, so its lead is not a selection artifact
+(the baseline's is +0.060 — it wins only when the question draw flatters
+it), and its ceiling is **0.960 against 0.911**, leaving more headroom for
+the query-side work to exploit.
+
+**The power limit, stated plainly.** The CI width implies SE ≈ 0.040 on the
+paired difference. Detecting +0.039 at 80% power needs SE ≈ 0.014 — roughly
+**eight times the spans, on the order of 450–500 questions**. A gold set of
+74 cannot settle a four-point chunking difference, and no amount of
+resampling changes that. Better to record the limit than to keep re-running
+the comparison.
+
+**Replication instead of re-testing.** Rather than repeat this comparison,
+the winning end-of-phase pipeline will be run under both 512 and 256 as a
+confirmation. Two independent conditions agreeing is worth more than one
+test repeated.
+
+The reselection rate also tracks discriminating power exactly as it should:
+74.8% at the 20k budget, 57.1% at 10k, 44.6% at fixed k, with ties rising
+from 11% to 19% as it degrades. At k=10 the half-split winner fails to win
+the other half more often than not, because 512 and 1024 sit 0.02 apart
+there. The metric that holds text constant is the one that separates
+configurations.
+
+### Complete-miss audit
+
+`scripts/14_inspect_misses.py` prints every question no configuration
+reaches, annotated with each span's oracle rank, so the two very different
+kinds of miss can be told apart:
+
+    oracle hit,  question miss  -> matching failure, the finding
+    oracle miss, question miss  -> unreachable; suspect the evidence
+
+Six questions are missed by all three runs at k=20: c002, c006, c008, f005,
+f013, m010. All six were read in full.
+
+**No gold-set defects.** Every one has well-formed text and evidence the
+oracle reaches, mostly at rank 1. Several of the misses across the wider set
+are deliberate probes whose authoring notes predicted the failure before it
+could be measured — f005 (a bullet list), f003 (a results table), f011
+(pseudocode), and f015, whose B-MSE passage was already recorded in Phase 4
+as unreachable by query. Those are the questions doing their job.
+
+Two are genuinely surprising and are the sharpest cases in the set:
+
+- **f013** names two rare tokens, `xLSTM` and `ConvLSTM`, sits at oracle
+  rank 1, and misses under every configuration.
+- **m010** contains "9.4 percent" and "ECMWF-IFS" near-verbatim from its
+  target passage and also misses everywhere.
+
+Both look like lexical signal that a dense encoder dilutes across 256 word
+pieces of surrounding prose.
+
+**Pre-registered prediction.** If lexical dilution is the bottleneck, adding
+BM25 should recover **f013, f015, m010 and c002 specifically**. If hybrid
+retrieval raises the aggregate but leaves those four missing, the lexical
+explanation is wrong and the gain came from somewhere else. Recorded before
+sweep 2 runs.
+
+**One covariate found.** Spans under 200 characters hit 25% of the time
+against 58% for spans of 700–1000 characters. That is the price of choosing
+tight evidence spans to keep the ablation discriminating (Phase 5 recorded
+median 3 relevant chunks per question for the same reason). It is a
+property of the gold set, not of any configuration, so it does not bias the
+comparison — but any absolute recall number in this project is depressed by
+it and should not be read against published benchmarks with looser
+annotation.
+
+### Defects found
+
+**pandas dtype inference silently zeroed the span counts.** The `hit_spans`
+columns hold strings like `"0;1"`, but a column containing only `"0"` and
+blanks is inferred as `float64`, so `"0"` comes back as `0.0` and a bare
+`.isdigit()` test counts nothing. The first budget-matched table therefore
+reported zero spans found for any run whose hit column happened to contain
+only single indices, and the `% of ceiling` column with it.
+
+*Resolution.* `_count_spans` in `13_compare_runs.py`, which normalises the
+`.0` suffix before counting, with the bug named in its docstring. Now
+duplicated in `15_selection_stability.py`; if a third script needs it, it
+moves into `rageval`.
+
+**The retrieval depth capped the budget view.** The first sweep ran with
+`--k-max 20`. At the 40k budget `fixed_256` consumed exactly `20.0` chunks —
+it had hit the retrieval limit, not the budget, so the budget was not
+actually being held constant. `fixed_512` at 19.4 was nearly capped too,
+which made the baseline appear to win at 40k. Re-run at `--k-max 50` /
+`--k 50` the picture changed.
+
+*Both were caught before they influenced a decision*, but only because the
+budget table was read column by column rather than skimmed for the winner.
+An exactly-round `20.0` in a column of decimals is the kind of tell that is
+invisible unless someone is looking for it.
+
+**Over-read "consistent across four budgets".** Reported the four budget
+columns as if they were four agreeing trials. They are nested subsets of one
+ranked list — the 5k result is contained in the 40k result — so they cannot
+corroborate each other. Corrected when the paired statistics came back and
+showed a single undecided difference rather than four confirmations.
+
+### Decisions
+
+1. **Baseline remains `fixed_512`.** The rule was written before this
+   number was seen; 84.4% win frequency with a CI containing zero does not
+   clear it.
+2. **`fixed_128` dropped.** It was in the plan as a fourth chunk size. With
+   256 and 512 indistinguishable at n=58, a fourth point on the same axis
+   is underpowered by construction and would spend a run for no resolvable
+   answer.
+3. **Character budget is the primary reporting metric for Phase 6.** Fixed
+   k is reported alongside it where chunking is held constant, and not used
+   for selection where it is not.
+4. **`fixed_256` is the standing challenger**, to be re-run against the
+   winning pipeline at the end of the phase as a replication rather than a
+   repeat.
+
+### Standing lesson
+
+The stability analysis was built to guard against selection noise on the
+chunking axis. It found something else: a metric whose ranking inverts
+depending on how much text each arm is allowed to hand over. The guard
+against being fooled by the answer caught a problem in the question.
+
+And the narrower version: two numbers can both be right and still point
+opposite ways. p = 0.503 and an 84.4% win rate are the same fact — a small
+positive difference this gold set cannot resolve — described by two
+instruments with different sensitivities. The temptation is to quote
+whichever one supports the switch.
+
+---
+
+## Plan amendments (Phase 6 additions)
+
+**The experiment matrix was circular.** As written, the chunking sweep held
+retrieval at "hybrid" while the retrieval sweep held chunking at "the
+winning chunker". Neither can run first. This is not a scheduling
+inconvenience: with the axes defined in terms of each other, the reported
+best configuration would depend on an ordering the plan never states, and
+so could not be reproduced from the plan.
+
+*Resolution.* Name the seed explicitly and fix the order.
+
+    seed:  fixed_512 / all-MiniLM-L6-v2 / dense-only / k=10
+    order: chunking -> retrieval -> reranking -> k -> embedding model
+
+Each sweep varies one axis with all others held at the seed, except that a
+sweep inherits any change from an earlier sweep that cleared the switching
+rule. Sweep 1 cleared nothing, so sweep 2 runs on the untouched seed.
+
+*Limitation, recorded rather than solved.* This is a greedy coordinate
+search, so the result is order-dependent: a chunking that only pays off
+under hybrid retrieval will be rejected in sweep 1 and never revisited on
+its own. That sits alongside the interaction blindness the plan already
+admits. The end-of-phase replication run (winning pipeline × {512, 256}) is
+a partial check on exactly this and is the only interaction actually
+measured.
+
+**Phase 4's open decision is resolved: confidence intervals plus selection
+stability, not a held-out split.** The Phase 4 log deferred a choice between
+reporting CIs and splitting the gold set so a winner must hold on both
+halves. A permanent holdout is the wrong instrument at n=58: a 30% holdout
+is 17 questions, whose CI on recall is roughly ±0.12 — too wide to separate
+any configuration from any other. That trades a third of the gold set for a
+number that says nothing. Repeated stratified half-splits
+(`15_selection_stability.py`) use every question in both roles across
+thousands of draws instead, and report the two things a holdout was wanted
+for: how often each configuration is selected, and how inflated the
+selected one's score is.
+
+**Switching rule, pre-registered.** A configuration replaces the baseline
+only when its paired CI excludes zero **and** its half-split win rate is
+decisively above chance. When either fails, the baseline carries forward and
+the sweep is written up as a null result. Applied to sweep 1 this keeps
+`fixed_512` despite `fixed_256` leading at every character budget.
+
+**`fixed_128` removed from the chunking sweep.** Underpowered by
+construction once 256 and 512 proved indistinguishable at this sample size.
 
 ## Plan amendments
 
