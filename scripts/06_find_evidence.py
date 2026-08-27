@@ -11,6 +11,7 @@ import argparse
 import json
 import re
 import sys
+from pathlib import Path
 
 from rageval.config import INTERIM_DIR
 
@@ -79,6 +80,14 @@ def main() -> int:
                    help="Widen the span to clean boundaries. Default: sentence.")
     args = p.parse_args()
 
+    # Remove any previous output first. Otherwise a failed lookup returns
+    # early and leaves the last run's file in place, which reads as a
+    # successful result and silently attaches the wrong evidence.
+    if args.out:
+        out_path = Path(args.out)
+        if out_path.exists():
+            out_path.unlink()
+
     text, title = load_text(args.paper)
     spans = find_spans(text, args.quote)
 
@@ -105,6 +114,8 @@ def main() -> int:
         print(f"Quote not found in {args.paper}.")
         print("The extracted text collapses line breaks - try a shorter phrase,")
         print("and check you are quoting the extraction rather than the PDF.")
+        if args.out:
+            print(f"No file written. Any previous {args.out} has been removed.")
         return 1
 
     if args.json or args.out:
