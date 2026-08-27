@@ -16,6 +16,9 @@ import pytest
 from rageval.evaluation.retrieval_metrics import (
     Retrieved,
     Span,
+    coverage_at_budget,
+    recall_at_budget,
+    take_within_budget,
     aggregate,
     aggregate_by_type,
     coverage_at_k,
@@ -315,3 +318,55 @@ def test_hit_spans_respects_k():
     row = evaluate_question(q, got, ks=(2, 5))
     assert row["hit_spans@2"] == "0"
     assert row["hit_spans@5"] == "0;1"
+
+
+# --------------------------------------------------------------------------
+# Character budgets
+# --------------------------------------------------------------------------
+
+
+def test_budget_packs_until_the_next_would_overflow():
+    # lengths 100, 100, 100; budget 250 fits two (third would make 300).
+    got = [r("A", 0, 100), r("A", 100, 200), r("A", 200, 300)]
+    assert len(take_within_budget(got, 250)) == 2
+
+
+def test_budget_always_takes_at_least_one_chunk():
+    # A single chunk larger than the whole budget still comes back: a real
+    # system truncates it rather than returning an empty context.
+    got = [r("A", 0, 5000)]
+    assert len(take_within_budget(got, 1000)) == 1
+
+
+def test_budget_exact_fit_is_inclusive():
+    got = [r("A", 0, 100), r("A", 100, 200)]
+    assert len(take_within_budget(got, 200)) == 2
+
+
+def test_budget_favours_small_chunks_at_equal_characters():
+    # The point of the whole budget view: 4 small chunks or 1 large one for
+    # the same 400 characters. Only the small-chunk run reaches the span.
+    spans = [s("A", 900, 950)]
+    small = [r("A", i, i + 100) for i in (0, 100, 200, 900)]
+    large = [r("B", 0, 400)]
+    assert recall_at_budget(small, spans, 400) == 1.0
+    assert recall_at_budget(large, spans, 400) == 0.0
+
+
+def test_coverage_at_budget_is_a_fraction():
+    spans = [s("A", 0, 50), s("B", 0, 50)]
+    got = [r("A", 0, 100), r("B", 0, 100)]
+    assert coverage_at_budget(got, spans, 100) == 0.5   # only the first fits
+    assert coverage_at_budget(got, spans, 200) == 1.0
+
+
+def test_evaluate_question_records_effective_k_per_budget():
+    q = FakeQuestion(
+        id="f001", question_type="factual", evidence=[FakeEvidence("A", 0, 50)]
+    )
+    got = [r("A", 0, 100), r("A", 100, 200), r("A", 200, 300)]
+    row = evaluate_question(q, got, ks=(5,), budgets=(150, 1000))
+    assert row["k@B150"] == 1
+    assert row["k@B1000"] == 3
+    assert row["recall@B150"] == 1.0
+    assert row["hit_spans@B1000"] == "0"

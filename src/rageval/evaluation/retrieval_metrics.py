@@ -16,6 +16,13 @@ multi-evidence ones. For multi_hop that divergence is the whole story: a
 system that finds the terminal passage but never the referring sentence
 scores well on Recall and fails Coverage, and only Coverage exposes it.
 
+Metrics are also reported at a character BUDGET, not only at a rank cutoff.
+Comparing chunkings at fixed k is confounded: smaller chunks mean more of
+them, so top-10 delivers a quarter of the text at 256 tokens that it does at
+1024. A generator is limited by context, not by document count, so the
+budget view is the decision-relevant one - and it handles variable-size
+chunkers natively, where multiplying a median by k does not.
+
 This module is deliberately free of any dependency on the retriever, the
 vector store, or pandas, so the metrics can be tested against hand-computed
 cases without building an index.
@@ -29,6 +36,10 @@ from typing import Iterable, Sequence
 
 # Report at these cutoffs unless told otherwise.
 DEFAULT_KS = (1, 3, 5, 10, 20)
+
+# Character budgets, chosen to bracket the baseline: 512-token chunks at k=10
+# is roughly 21k characters, so 20_000 is the like-for-like comparison point.
+DEFAULT_BUDGETS = (5_000, 10_000, 20_000, 40_000)
 
 
 @dataclass(frozen=True)
@@ -174,11 +185,43 @@ def count_relevant_chunks(chunks: Iterable, spans: Sequence[Span]) -> int:
     return total
 
 
+def take_within_budget(retrieved: Sequence[Retrieved], budget: int) -> list[Retrieved]:
+    """Chunks in rank order that fit in `budget` characters.
+
+    Packing rule: add chunks until the next one would overflow, but always
+    take at least the first - a real system truncates an oversized leading
+    chunk rather than returning nothing.
+    """
+    taken: list[Retrieved] = []
+    used = 0
+    for r in retrieved:
+        length = r.char_end - r.char_start
+        if taken and used + length > budget:
+            break
+        taken.append(r)
+        used += length
+    return taken
+
+
+def recall_at_budget(retrieved, spans, budget: int) -> float:
+    if not spans:
+        return float("nan")
+    return 1.0 if spans_hit(take_within_budget(retrieved, budget), spans) else 0.0
+
+
+def coverage_at_budget(retrieved, spans, budget: int) -> float:
+    if not spans:
+        return float("nan")
+    got = spans_hit(take_within_budget(retrieved, budget), spans)
+    return len(got) / len(spans)
+
+
 def evaluate_question(
     question,
     retrieved: Sequence[Retrieved],
     ks: Sequence[int] = DEFAULT_KS,
     n_relevant_total: int | None = None,
+    budgets: Sequence[int] = DEFAULT_BUDGETS,
 ) -> dict:
     """Metrics for one question. Returns a flat row ready for a CSV."""
     spans = spans_from_question(question)
@@ -210,26 +253,39 @@ def evaluate_question(
         # terminal - so this distinguishes "the chain broke" from "the chain
         # broke at the first hop", which the coverage fraction cannot.
         row[f"hit_spans@{k}"] = ";".join(str(i) for i in sorted(hit))
+
+    # Budget view. `k@B` records how many chunks actually fitted, which is
+    # the number that makes two chunkings comparable.
+    for b in budgets:
+        taken = take_within_budget(retrieved, b)
+        got = spans_hit(taken, spans)
+        row[f"recall@B{b}"] = 1.0 if got else 0.0
+        row[f"coverage@B{b}"] = len(got) / len(spans)
+        row[f"k@B{b}"] = len(taken)
+        row[f"hit_spans@B{b}"] = ";".join(str(i) for i in sorted(got))
     return row
 
 
-def aggregate(rows: Sequence[dict], ks: Sequence[int] = DEFAULT_KS) -> dict:
+def aggregate(rows: Sequence[dict], ks: Sequence[int] = DEFAULT_KS,
+              budgets: Sequence[int] = DEFAULT_BUDGETS) -> dict:
     """Mean of each metric over scorable rows, plus counts."""
     scored = [r for r in rows if r.get("scorable")]
     out: dict = {"n_questions": len(rows), "n_scored": len(scored)}
     if not scored:
         return out
     keys = ["mrr"] + [f"{m}@{k}" for k in ks for m in ("recall", "coverage", "ndcg")]
+    keys += [f"{m}@B{b}" for b in budgets for m in ("recall", "coverage", "k")]
     for key in keys:
         vals = [r[key] for r in scored if key in r]
         out[key] = sum(vals) / len(vals) if vals else float("nan")
     return out
 
 
-def aggregate_by_type(rows: Sequence[dict], ks: Sequence[int] = DEFAULT_KS) -> dict[str, dict]:
+def aggregate_by_type(rows: Sequence[dict], ks: Sequence[int] = DEFAULT_KS,
+                      budgets: Sequence[int] = DEFAULT_BUDGETS) -> dict[str, dict]:
     """Aggregates per question_type, in a stable order."""
     order = ["factual", "comparative", "multi_hop", "ambiguous", "unanswerable"]
     by_type: dict[str, list[dict]] = {}
     for r in rows:
         by_type.setdefault(r["question_type"], []).append(r)
-    return {t: aggregate(by_type[t], ks) for t in order if t in by_type}
+    return {t: aggregate(by_type[t], ks, budgets) for t in order if t in by_type}
