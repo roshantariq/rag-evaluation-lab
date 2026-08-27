@@ -36,6 +36,7 @@ from rageval.config import (
 from rageval.embed.encoder import Encoder
 from rageval.evaluation.gold import load_gold
 from rageval.evaluation.retrieval_metrics import (
+    DEFAULT_BUDGETS,
     DEFAULT_KS,
     Retrieved,
     aggregate,
@@ -213,6 +214,15 @@ def main() -> int:
         vals = "".join(f"{overall[f'{name}@{k}']:>9.3f}" for k in ks)
         print(f"  {name:<14}{vals}")
     print(f"  {'MRR':<14}{overall['mrr']:>9.3f}")
+
+    print(f"\n{'-' * 74}\nAT EQUAL CHARACTER BUDGET\n{'-' * 74}")
+    print("  Fixed k is not comparable across chunkings: smaller chunks mean")
+    print("  more of them, so top-k delivers less text. This view fixes the")
+    print("  context budget instead, which is what a generator is limited by.")
+    print(f"\n  {'budget':>9}{'chunks':>9}{'recall':>9}{'coverage':>10}")
+    for b in DEFAULT_BUDGETS:
+        print(f"  {b:>9,}{overall[f'k@B{b}']:>9.1f}"
+              f"{overall[f'recall@B{b}']:>9.3f}{overall[f'coverage@B{b}']:>10.3f}")
 
     print(f"\n{'-' * 74}\nBY QUESTION TYPE\n{'-' * 74}")
     print(f"  {'type':<14}{'n':>4}{'R@5':>8}{'R@10':>8}{'Cov@5':>8}{'Cov@10':>8}"

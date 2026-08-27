@@ -45,17 +45,29 @@ from rageval.evaluation.retrieval_metrics import Retrieved, is_scorable
 from rageval.store.chroma_store import ChromaStore
 
 
-def first_hit_rank(hits, arxiv_id: str, start: int, end: int) -> int | None:
+def first_hit(hits, arxiv_id: str, start: int, end: int):
+    """Rank of the first overlapping chunk, and the characters it costs.
+
+    `before` is the text ranked above the hit and `length` is the hit chunk
+    itself, so a budget check uses exactly the packing rule in
+    retrieval_metrics.take_within_budget: reachable within B characters when
+    before == 0 or before + length <= B.
+    """
+    before = 0
     for i, h in enumerate(hits, 1):
+        length = h.char_end - h.char_start
         if Retrieved(h.arxiv_id, h.char_start, h.char_end).overlaps(arxiv_id, start, end):
-            return i
-    return None
+            return i, before, length
+        before += length
+    return None, None, None
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", default="baseline.yaml")
     parser.add_argument("--k", type=int, default=10)
+    parser.add_argument("--tag", default="baseline",
+                        help="Names the output file; must differ per config.")
     parser.add_argument("--compare", default=None,
                         help="Question-query CSV to compare against "
                              "(default results/tables/retrieval_baseline.csv)")
@@ -82,7 +94,7 @@ def main() -> int:
         for i, ev in enumerate(q.evidence):
             quote = " ".join(ev.quote.split())
             hits = store.query(encoder.encode_query(quote), k=args.k)
-            rank = first_hit_rank(hits, ev.arxiv_id, ev.char_start, ev.char_end)
+            rank, before, hit_len = first_hit(hits, ev.arxiv_id, ev.char_start, ev.char_end)
             rows.append({
                 "id": q.id,
                 "question_type": q.question_type,
@@ -90,6 +102,8 @@ def main() -> int:
                 "arxiv_id": ev.arxiv_id,
                 "quote_chars": len(quote),
                 "oracle_rank": rank,
+                "chars_before_hit": before,
+                "hit_chunk_chars": hit_len,
                 "oracle@1": rank == 1,
                 "oracle@5": rank is not None and rank <= 5,
                 f"oracle@{args.k}": rank is not None,
@@ -98,7 +112,7 @@ def main() -> int:
             print(f"  {n}/{len(questions)} questions")
 
     out = pd.DataFrame(rows)
-    out_path = TABLES_DIR / f"oracle_query_k{args.k}.csv"
+    out_path = TABLES_DIR / f"oracle_{args.tag}_k{args.k}.csv"
     out.to_csv(out_path, index=False)
 
     k = args.k
@@ -121,7 +135,7 @@ def main() -> int:
               f"{sub['oracle@5'].mean():>10.3f}{sub[f'oracle@{k}'].mean():>11.3f}")
 
     # --- the gap: oracle vs asking the actual question ---------------------
-    cmp_path = args.compare or (TABLES_DIR / "retrieval_baseline.csv")
+    cmp_path = args.compare or (TABLES_DIR / f"retrieval_{args.tag}.csv")
     try:
         qdf = pd.read_csv(cmp_path)
     except FileNotFoundError:
