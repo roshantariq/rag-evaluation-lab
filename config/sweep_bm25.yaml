@@ -1,0 +1,28 @@
+# Sweep 2, arm 2: lexical retrieval alone.
+#
+# Same collection as baseline.yaml, deliberately. BM25 is built from the
+# chunks already stored there, so chunking, extraction and chunk boundaries
+# are byte-identical to the dense arm and the ONLY thing that differs is
+# the retrieval function. Nothing needs re-indexing and no embeddings are
+# computed for this arm at all.
+chunking:
+  strategy: fixed_512
+  target_tokens: 512
+  overlap_tokens: 0
+
+embedding:
+  model: sentence-transformers/all-MiniLM-L6-v2   # unused by this arm
+
+index:
+  collection: baseline_fixed512_minilm
+
+retrieval:
+  mode: bm25
+  k: 5
+
+generation:
+  provider: openai
+  model: gpt-4o-mini
+  temperature: 0.0
+  max_tokens: 700
+  prompt_strategy: abstain

@@ -10,6 +10,19 @@ Two things are worth knowing before reading the output:
   * Recall@k asks whether ANY evidence span was found; Coverage@k asks what
     fraction of them were. They agree on single-evidence questions and
     diverge on the rest, which is where multi-hop behaviour shows up.
+
+Three retrieval modes share this one scoring path deliberately. A separate
+script per arm would let the arms drift apart in how they score, which is
+the failure this project keeps finding in other guises:
+
+    dense   the baseline - vector similarity alone
+    bm25    lexical only, over the identical chunk set
+    hybrid  reciprocal rank fusion of the two
+
+The bm25 arm exists because a hybrid result is uninterpretable without it.
+If hybrid beats dense but bm25 alone beats both, the dense half is dead
+weight; if bm25 alone is near zero and hybrid still improves, the fusion is
+doing real work.
 """
 
 from __future__ import annotations
@@ -46,7 +59,11 @@ from rageval.evaluation.retrieval_metrics import (
     is_scorable,
     spans_from_question,
 )
+from rageval.retrieve.bm25 import BM25Retriever
+from rageval.retrieve.fusion import DEFAULT_RRF_K, provenance, reciprocal_rank_fusion
 from rageval.store.chroma_store import ChromaStore
+
+MODES = ("dense", "bm25", "hybrid")
 
 
 def interim_path(arxiv_id: str):
@@ -127,6 +144,15 @@ def main() -> int:
     parser.add_argument("--tag", default="baseline", help="Names the output files.")
     parser.add_argument("--no-idcg-count", action="store_true",
                         help="Skip the relevant-chunk scan; nDCG then uses a weaker ideal.")
+    parser.add_argument("--retriever", default=None, choices=MODES,
+                        help="Overrides retrieval.mode in the config.")
+    parser.add_argument("--pool", type=int, default=100,
+                        help="Candidates fetched from EACH retriever before "
+                             "fusion (hybrid only). Held constant across runs: "
+                             "a deeper pool is more candidates to rerank, not "
+                             "more results, but it must still be declared.")
+    parser.add_argument("--rrf-k", type=int, default=DEFAULT_RRF_K,
+                        help="Reciprocal rank fusion constant. Not tuned.")
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(message)s", stream=sys.stdout)
@@ -136,6 +162,11 @@ def main() -> int:
 
     with open(CONFIG_DIR / args.config, "r", encoding="utf-8") as fh:
         cfg = yaml.safe_load(fh)
+
+    mode = args.retriever or cfg.get("retrieval", {}).get("mode", "dense")
+    if mode not in MODES:
+        print(f"Unknown retrieval mode {mode!r}; expected one of {MODES}.")
+        return 1
 
     gold_path = args.gold or (EVAL_DIR / "gold_questions.jsonl")
     questions = load_gold(gold_path)
@@ -147,6 +178,15 @@ def main() -> int:
     if store.count() == 0:
         print("Index is empty. Run scripts/03_build_index.py first.")
         return 1
+
+    # --- what this run actually is, printed so the output is self-describing
+    print(f"Retrieval mode : {mode}")
+    print(f"  collection   : {cfg['index']['collection']}  ({store.count()} chunks)")
+    if mode in ("dense", "hybrid"):
+        print(f"  embedding    : {cfg['embedding']['model']}")
+    if mode == "hybrid":
+        print(f"  fusion       : RRF k={args.rrf_k}, pool={args.pool} per retriever")
+    print(f"  depth        : k_max={args.k_max}\n")
 
     # --- relevant-chunk counts, for an honest IDCG -------------------------
     n_relevant: dict[str, int] = {}
@@ -173,7 +213,33 @@ def main() -> int:
                   "construction.")
         print()
 
-    encoder = Encoder(cfg["embedding"]["model"], cache_path=EMBED_CACHE)
+    # --- retrievers --------------------------------------------------------
+    encoder = None
+    if mode in ("dense", "hybrid"):
+        encoder = Encoder(cfg["embedding"]["model"], cache_path=EMBED_CACHE)
+
+    bm25 = None
+    if mode in ("bm25", "hybrid"):
+        print("Building BM25 index from the stored chunks...")
+        bm25 = BM25Retriever(store.all_records())
+        print(f"  {len(bm25)} chunks indexed lexically\n")
+
+    prov_total: dict[str, int] = defaultdict(int)
+    PROV_K = 10
+
+    def get_hits(question: str) -> list:
+        if mode == "dense":
+            return store.query(encoder.encode_query(question), k=args.k_max)
+        if mode == "bm25":
+            return bm25.query(question, k=args.k_max)
+        dense_hits = store.query(encoder.encode_query(question), k=args.pool)
+        sparse_hits = bm25.query(question, k=args.pool)
+        fused = reciprocal_rank_fusion([dense_hits, sparse_hits],
+                                       k=args.rrf_k, top_k=args.k_max)
+        for key, n in provenance(fused[:PROV_K],
+                                 {"dense": dense_hits, "bm25": sparse_hits}).items():
+            prov_total[key] += n
+        return fused
 
     rows = []
     drift = 0
@@ -181,7 +247,7 @@ def main() -> int:
         if not is_scorable(q):
             rows.append(evaluate_question(q, []))
             continue
-        hits = store.query(encoder.encode_query(q.question), k=args.k_max)
+        hits = get_hits(q.question)
         retrieved = [Retrieved(h.arxiv_id, h.char_start, h.char_end, h.score) for h in hits]
         if known_spans:
             for h in retrieved:
@@ -206,7 +272,7 @@ def main() -> int:
     ks = DEFAULT_KS
     overall = aggregate(rows, ks)
     print(f"\n{'=' * 74}\nRETRIEVAL  ({overall['n_scored']} scored questions, "
-          f"{args.tag})\n{'=' * 74}")
+          f"{args.tag}, mode={mode})\n{'=' * 74}")
     header = f"  {'':<14}" + "".join(f"{'@' + str(k):>9}" for k in ks)
     for name in ("recall", "coverage", "ndcg"):
         if name == "recall":
@@ -234,6 +300,16 @@ def main() -> int:
         print(f"  {qtype:<14}{agg['n_scored']:>4}{agg['recall@5']:>8.3f}"
               f"{agg['recall@10']:>8.3f}{agg['coverage@5']:>8.3f}"
               f"{agg['coverage@10']:>8.3f}{agg['ndcg@10']:>9.3f}{agg['mrr']:>8.3f}")
+
+    # --- is the fusion doing anything, or just reordering dense? -----------
+    if mode == "hybrid" and prov_total:
+        total = sum(prov_total.values())
+        print(f"\n{'-' * 74}\nWHERE THE TOP {PROV_K} CAME FROM\n{'-' * 74}")
+        for key in ("dense only", "bm25 only", "both"):
+            n = prov_total.get(key, 0)
+            print(f"  {key:<14}{n:>6}{100 * n / total:>8.1f}%")
+        print("\n  'bm25 only' near zero means the fusion is reordering documents")
+        print("  dense already had, and any gain is reranking rather than recall.")
 
     # --- which half of the chain was found ---------------------------------
     for qtype in ("multi_hop", "comparative"):
@@ -268,6 +344,16 @@ def main() -> int:
         print("\n  Read these by hand. A miss is either a retrieval failure worth "
               "reporting\n  or a question whose evidence was badly chosen - and the "
               "aggregate cannot\n  tell you which.")
+
+        # The pre-registered check for this sweep, evaluated automatically so
+        # it cannot be quietly forgotten once the aggregate looks good.
+        predicted = {"f013", "f015", "m010", "c002"}
+        still = predicted & {r["id"] for r in misses}
+        if mode != "dense":
+            print(f"\n  PRE-REGISTERED (sweep 2): lexical retrieval should recover")
+            print(f"  f013, f015, m010, c002. Still missing: "
+                  f"{', '.join(sorted(still)) if still else 'none'}"
+                  f"  ({len(predicted) - len(still)}/4 recovered)")
 
     print(f"\n  per-question results -> {out_path}")
     return 0

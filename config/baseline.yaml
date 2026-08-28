@@ -12,6 +12,7 @@ index:
   collection: baseline_fixed512_minilm
 
 retrieval:
+  mode: dense             # dense | bm25 | hybrid
   k: 5
 
 generation:
