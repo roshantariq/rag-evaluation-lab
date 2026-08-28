@@ -3,9 +3,12 @@
 Running record of decisions, defects and measured results. Phase numbering
 follows the build plan. Newest phase last.
 
-**Status:** Phases 0–5 complete. Phase 6 in progress: sweep 1 (chunk size)
-closed as a null result; baseline remains fixed-512. Selection rule and
-sweep order pre-registered. Sweep 2 (hybrid BM25 + RRF) next.
+**Status:** Phases 0–5 complete. Phase 6 in progress: sweeps 1 (chunk
+size), 2 (retrieval function) and 2b (fusion) closed. Chunk size and fusion
+are null results; BM25 replaces dense retrieval as the baseline, with its
+effect size bounded by a measured authoring confound. The embedding-model
+sweep is dropped under its pre-registered condition. Next: reranking, a k
+sweep, and a paraphrase validity test on the confound.
 
 ---
 
@@ -810,19 +813,23 @@ Span-level recall, whole gold set:
 | fixed_512 (baseline) | **0.436** | 0.307 | 0.416 | 0.911 |
 | fixed_1024 | 0.416 | 0.168 | 0.287 | — |
 
-Paired tests at the 20k budget, McNemar exact on discordant span pairs with
-a cluster bootstrap over questions:
+Paired tests at the 20k budget: McNemar exact on discordant span pairs,
+cluster bootstrap over questions, Holm-corrected across the three pairs.
+Re-run through `16_paired_test.py` after sweep 2, so every paired test in
+Phase 6 comes from one instrument.
 
-| comparison | p | 95% CI on the difference |
-|---|---|---|
-| 512 vs 256 | 0.503 | [−0.040, +0.115] |
-| 512 vs 1024 | 0.004 | [−0.219, −0.045] |
+| comparison | delta | 95% CI | Holm p |
+|---|---|---|---|
+| 512 vs 256 | +0.040 | [−0.040, +0.114] | 0.5034 |
+| 512 vs 1024 | −0.129 | [−0.222, −0.042] | 0.0089 |
+| 256 vs 1024 | −0.168 | [−0.265, −0.078] | 0.0045 |
 
 At fixed k=10 the sign reverses and 256 becomes the *worse* configuration
-(p = 0.078).
+(0.347 against 0.436). That comparison has not been re-run through
+`16_paired_test.py`, so no corrected p is quoted for it.
 
 **Result: null on chunk size.** 1024 is reliably worse at equal budget.
-Between 256 and 512 the difference is +0.039 in favour of 256 and the
+Between 256 and 512 the difference is +0.040 in favour of 256 and the
 confidence interval straddles zero. The pre-registered rule — switch only
 when the paired CI excludes zero *and* selection is stable — says carry the
 baseline forward. **Baseline stays fixed-512.**
@@ -993,7 +1000,7 @@ showed a single undecided difference rather than four confirmations.
    winning pipeline at the end of the phase as a replication rather than a
    repeat.
 
-### Standing lesson
+### Standing lesson — sweep 1
 
 The stability analysis was built to guard against selection noise on the
 chunking axis. It found something else: a metric whose ranking inverts
@@ -1005,55 +1012,6 @@ opposite ways. p = 0.503 and an 84.4% win rate are the same fact — a small
 positive difference this gold set cannot resolve — described by two
 instruments with different sensitivities. The temptation is to quote
 whichever one supports the switch.
-
----
-
-## Plan amendments (Phase 6 additions)
-
-**The experiment matrix was circular.** As written, the chunking sweep held
-retrieval at "hybrid" while the retrieval sweep held chunking at "the
-winning chunker". Neither can run first. This is not a scheduling
-inconvenience: with the axes defined in terms of each other, the reported
-best configuration would depend on an ordering the plan never states, and
-so could not be reproduced from the plan.
-
-*Resolution.* Name the seed explicitly and fix the order.
-
-    seed:  fixed_512 / all-MiniLM-L6-v2 / dense-only / k=10
-    order: chunking -> retrieval -> reranking -> k -> embedding model
-
-Each sweep varies one axis with all others held at the seed, except that a
-sweep inherits any change from an earlier sweep that cleared the switching
-rule. Sweep 1 cleared nothing, so sweep 2 runs on the untouched seed.
-
-*Limitation, recorded rather than solved.* This is a greedy coordinate
-search, so the result is order-dependent: a chunking that only pays off
-under hybrid retrieval will be rejected in sweep 1 and never revisited on
-its own. That sits alongside the interaction blindness the plan already
-admits. The end-of-phase replication run (winning pipeline × {512, 256}) is
-a partial check on exactly this and is the only interaction actually
-measured.
-
-**Phase 4's open decision is resolved: confidence intervals plus selection
-stability, not a held-out split.** The Phase 4 log deferred a choice between
-reporting CIs and splitting the gold set so a winner must hold on both
-halves. A permanent holdout is the wrong instrument at n=58: a 30% holdout
-is 17 questions, whose CI on recall is roughly ±0.12 — too wide to separate
-any configuration from any other. That trades a third of the gold set for a
-number that says nothing. Repeated stratified half-splits
-(`15_selection_stability.py`) use every question in both roles across
-thousands of draws instead, and report the two things a holdout was wanted
-for: how often each configuration is selected, and how inflated the
-selected one's score is.
-
-**Switching rule, pre-registered.** A configuration replaces the baseline
-only when its paired CI excludes zero **and** its half-split win rate is
-decisively above chance. When either fails, the baseline carries forward and
-the sweep is written up as a null result. Applied to sweep 1 this keeps
-`fixed_512` despite `fixed_256` leading at every character budget.
-
-**`fixed_128` removed from the chunking sweep.** Underpowered by
-construction once 256 and 512 proved indistinguishable at this sample size.
 
 ---
 
@@ -1228,7 +1186,7 @@ The check is computed by `10_eval_retrieval.py` itself and printed on every
 non-dense run, so it cannot be quietly forgotten once an aggregate looks
 good.
 
-### Standing lesson
+### Standing lesson — sweep 2
 
 Two of the three instruments built this phase were built to guard against
 being fooled by an answer, and both caught something in the *question*
@@ -1241,113 +1199,109 @@ And the narrower one: a ratio of two noisy estimates is not a criterion. If
 a rule is worth declaring in advance, it is worth declaring with an
 interval attached.
 
----
+### Sweep 2b — fusion, exploratory and post-hoc
 
-## Plan amendments (after sweep 2)
+Labelled post-hoc throughout. RRF at k=60 was the pre-registered
+configuration; every constant tried here was chosen after seeing that it
+failed, so nothing in this section can replace a baseline on its own.
+Capped at one run because the ceiling arithmetic in sweep 2 put the entire
+remaining prize at +0.059, inside this gold set's noise floor.
 
-**Sweep 1's p-values are now Holm-corrected.** Re-run through
-`16_paired_test.py` so every paired test in Phase 6 comes from one
-instrument. The conclusions are unchanged; the numbers are not:
+**The mechanism prediction, confirmed.** Sweep 2 diagnosed RRF at k=60 with
+a pool of 100 as an intersection ranker: agreement beats a first-place
+finish, so unique recall cannot reach the fused head. Lowering k should let
+singletons through. Share of the fused top 10 unique to one retriever:
 
-| comparison | delta | 95% CI | Holm p |
+| fusion | dense only | bm25 only | both |
 |---|---|---|---|
-| 512 vs 256 | +0.040 | [−0.040, +0.114] | 0.5034 |
-| 512 vs 1024 | −0.129 | [−0.222, −0.042] | 0.0089 |
-| 256 vs 1024 | −0.168 | [−0.265, −0.078] | 0.0045 |
+| RRF k=60 | 0.0% | 0.0% | 100.0% |
+| RRF k=10 | 7.9% | 8.8% | 83.3% |
+| RRF k=1 | 13.3% | 15.3% | 71.4% |
+| interleave | 15.2% | 18.8% | 66.0% |
 
-The earlier sweep-1 entry quoted an uncorrected p = 0.004 for the 1024
-comparison; it is 0.0089 after correction across the three pairs.
+m010, which k=60 had lost, returns in every variant — 2/4 on the
+pre-registered question list, matching BM25 alone.
 
-**The seed configuration changes after sweep 2.** BM25 cleared the
-switching rule, so sweeps 3 onward inherit it:
+**The performance result, null.** Span recall at k=20, against BM25 alone:
 
-    seed:  fixed_512 / BM25 / k=10
-    order: chunking -> retrieval -> reranking -> k -> embedding model
+| arm | span recall | delta | 95% CI | Holm p | win rate |
+|---|---|---|---|---|---|
+| bm25 | 0.663 | — | — | — | 14.6% |
+| hybrid_rrf1 | 0.683 | +0.020 | — | — | 34.3% |
+| hybrid_rrf10 | 0.683 | +0.020 | [−0.032, +0.077] | 1.0000 | 40.8% |
+| hybrid_interleave | 0.663 | +0.000 | [−0.053, +0.058] | 1.0000 | 10.2% |
 
-**The order-dependence limitation now has a concrete instance, not just a
-caveat.** Sweep 1 compared chunk sizes *under dense retrieval* and found
-256 and 512 indistinguishable. Chunk size interacts with retrieval function
-in an obvious way — BM25's length normalisation (b = 0.75) behaves
-differently from an encoder that truncates at 256 word pieces — so that
-result does not transfer automatically to the new baseline. This is exactly
-the greedy-coordinate-search weakness the plan already admits, now
-observable rather than hypothetical.
+Every pairwise comparison returns Holm p = 1.0000 on 6 to 8 discordant
+spans. The stability analysis calls it a coin flip at 40.8% for four arms,
+with a mean winning margin of 0.009 and **2,187 of 4,000 half-splits ending
+in an exact tie** — over half the time the arms are literally identical on
+29 questions. The winner reselects on the held-out half 28% of the time,
+which for four arms is chance.
 
-*Consequence.* The end-of-phase replication run becomes: winning pipeline x
-{fixed_512, fixed_256} **under BM25**. If 256 wins there, the sweep-1 null
-was an artifact of the retrieval function it was measured under, and the
-build log says so.
+**The control did its job.** Interleaving has no constant: each retriever
+nominates its next unseen document in turn, so each one's rank-1 is
+guaranteed into the fused top 2. It scored 0.663 — BM25's number exactly.
+That is what makes the rrf10 result readable: a tuning-free fusion buys
+nothing, a tuned fusion buys +0.020 that no instrument can distinguish from
+zero, and the difference between them is not separable either. Without the
+control, +0.020 from a constant picked after the fact would have been very
+easy to write up as a finding.
 
-**The embedding-model sweep is now conditional.** It was planned as the
-last axis. With BM25 as the baseline and dense retrieval contributing 6
-unique spans out of 101, an embedding-model sweep is a sweep over a
-component that is no longer in the pipeline. It runs only if the
-exploratory fusion work shows dense retrieval earning its place; otherwise
-it is dropped and the log records why. Dropping a planned experiment
-because the pipeline moved is a result, not an omission.
+**Why the union ceiling was never reachable.** Sweep 2 computed that a
+fusion keeping every span either retriever found would score 0.644 at the
+20k budget. Interleaving comes closest to that ideal — it has the most
+unique recall of any arm, 18.8% bm25-only and 15.2% dense-only — and still
+scores exactly what BM25 scores. **Fusion trades slots; it does not add
+them.** Every document promoted for being unique displaces one that was
+there on merit, and at fixed k or fixed budget that exchange is close to
+even. The union ceiling is only collectable by increasing depth, which
+changes the budget and so is not the same experiment.
 
-**Fusion is capped at one exploratory run.** A perfect fusion could reach
-0.644 against BM25's 0.584, and +0.059 is inside this gold set's noise
-floor. The run covers RRF at k=1 and k=10 plus plain rank interleaving,
-reported together and labelled post-hoc, because choosing the constant
-after seeing that k=60 failed is a post-hoc choice however well motivated
-the mechanism argument is.
+That is a better explanation of the null than "the effect was too small to
+see", and it was not obvious in advance.
 
-**`_count_spans` moves into `rageval`.** Three scripts now carry private
-copies of the same pandas-dtype guard (13, 15, 16, and 17 has a fourth
-variant). The bug it defends against — a column of only "0" and blanks
-inferred as float64, so `.isdigit()` counts nothing — already produced one
-wrong results table in sweep 1. Four copies is how a fix lands in three of
-them.
+### Decision: fusion closed, BM25 stands
 
+No arm replaces BM25. The pipeline for sweeps 3 onward is BM25 alone.
+
+**The embedding-model sweep is dropped**, executing the condition recorded
+after sweep 2: it was to run only if the fusion work showed dense retrieval
+earning its place. Dense contributes unique documents — 15.2% of
+interleaving's top 10 — and no measurable recall. A sweep over embedding
+models is now a sweep over a component that is not in the pipeline. Its
+budget goes to reranking and to the paraphrase validity test instead.
+
+### Predictions made in advance, and how they landed
+
+Kept as a scoreboard because a pre-registration that is only consulted when
+it succeeds is not a pre-registration.
+
+| prediction | recorded | outcome |
+|---|---|---|
+| Query-side axes move the numbers; chunking axes move them much less | Phase 5 | **Confirmed.** Chunking +0.040, not separable. Retrieval +0.168, Holm p = 0.0069. |
+| RRF's k controls whether unique recall survives; lowering it restores singletons | Sweep 2 | **Confirmed.** 0.0% → 8.8% → 15.3% bm25-only as k fell from 60 to 10 to 1. |
+| The whole remaining fusion prize is +0.059, inside the noise floor | Sweep 2 | **Confirmed.** Measured deltas +0.000 to +0.020, every Holm p = 1.0000. |
+| BM25 recovers f013, f015, m010, c002 | Sweep 2 | **Half.** f015 and m010 recovered; f013 and c002 miss under every configuration tried. |
+| 512 vs 256 is a coin flip on half-splits | Sweep 1 | **Wrong in magnitude.** Predicted ~50%, measured 84.4%. The conclusion (not separable) held; the prediction about the instrument did not. |
+| BM25's advantage survives among low-overlap questions | Sweep 2 | **Failed.** Ratio 0.19 against a threshold of 0.50; effect size bounded. |
+| Dense and lexical retrieval suit different question styles | Sweep 2 | **Not established.** Interaction CI [−0.049, +0.367] includes zero. |
+
+Two confirmed mechanisms, two confirmed magnitudes, one half, one wrong,
+one failed and one unsupported. The falsified entries are the ones that
+changed what the project claims.
+
+### Standing lesson — sweep 2b
+
+The control arm was worth more than the treatment arms. Three RRF variants
+would have produced a ranking, a best constant and a plausible story about
+why k=10 suits two retrievers with disjoint failure modes. Interleaving —
+which has nothing to tune and therefore nothing to get right — landed on
+BM25's exact score and made the whole ranking legible as noise.
+
+When a knob is turned after seeing that its default failed, the useful
+experiment is not which setting wins. It is whether a method with no knob
+does just as well.
 ---
-
-## Plan amendments (Phase 6 additions)
-
-**The experiment matrix was circular.** As written, the chunking sweep held
-retrieval at "hybrid" while the retrieval sweep held chunking at "the
-winning chunker". Neither can run first. This is not a scheduling
-inconvenience: with the axes defined in terms of each other, the reported
-best configuration would depend on an ordering the plan never states, and
-so could not be reproduced from the plan.
-
-*Resolution.* Name the seed explicitly and fix the order.
-
-    seed:  fixed_512 / all-MiniLM-L6-v2 / dense-only / k=10
-    order: chunking -> retrieval -> reranking -> k -> embedding model
-
-Each sweep varies one axis with all others held at the seed, except that a
-sweep inherits any change from an earlier sweep that cleared the switching
-rule. Sweep 1 cleared nothing, so sweep 2 runs on the untouched seed.
-
-*Limitation, recorded rather than solved.* This is a greedy coordinate
-search, so the result is order-dependent: a chunking that only pays off
-under hybrid retrieval will be rejected in sweep 1 and never revisited on
-its own. That sits alongside the interaction blindness the plan already
-admits. The end-of-phase replication run (winning pipeline × {512, 256}) is
-a partial check on exactly this and is the only interaction actually
-measured.
-
-**Phase 4's open decision is resolved: confidence intervals plus selection
-stability, not a held-out split.** The Phase 4 log deferred a choice between
-reporting CIs and splitting the gold set so a winner must hold on both
-halves. A permanent holdout is the wrong instrument at n=58: a 30% holdout
-is 17 questions, whose CI on recall is roughly ±0.12 — too wide to separate
-any configuration from any other. That trades a third of the gold set for a
-number that says nothing. Repeated stratified half-splits
-(`15_selection_stability.py`) use every question in both roles across
-thousands of draws instead, and report the two things a holdout was wanted
-for: how often each configuration is selected, and how inflated the
-selected one's score is.
-
-**Switching rule, pre-registered.** A configuration replaces the baseline
-only when its paired CI excludes zero **and** its half-split win rate is
-decisively above chance. When either fails, the baseline carries forward and
-the sweep is written up as a null result. Applied to sweep 1 this keeps
-`fixed_512` despite `fixed_256` leading at every character budget.
-
-**`fixed_128` removed from the chunking sweep.** Underpowered by
-construction once 256 and 512 proved indistinguishable at this sample size.
 
 ## Plan amendments
 
@@ -1418,8 +1372,8 @@ instrument. The conclusions are unchanged; the numbers are not:
 | 512 vs 1024 | −0.129 | [−0.222, −0.042] | 0.0089 |
 | 256 vs 1024 | −0.168 | [−0.265, −0.078] | 0.0045 |
 
-The earlier sweep-1 entry quoted an uncorrected p = 0.004 for the 1024
-comparison; it is 0.0089 after correction across the three pairs.
+The sweep-1 section above has been updated in place. It originally quoted
+an uncorrected p = 0.004 for the 1024 comparison; corrected, it is 0.0089.
 
 **The seed configuration changes after sweep 2.** BM25 cleared the
 switching rule, so sweeps 3 onward inherit it:
@@ -1441,20 +1395,28 @@ observable rather than hypothetical.
 was an artifact of the retrieval function it was measured under, and the
 build log says so.
 
-**The embedding-model sweep is now conditional.** It was planned as the
-last axis. With BM25 as the baseline and dense retrieval contributing 6
-unique spans out of 101, an embedding-model sweep is a sweep over a
-component that is no longer in the pipeline. It runs only if the
-exploratory fusion work shows dense retrieval earning its place; otherwise
-it is dropped and the log records why. Dropping a planned experiment
-because the pipeline moved is a result, not an omission.
+**The embedding-model sweep is dropped.** It was planned as the last axis,
+then made conditional on the exploratory fusion work showing dense
+retrieval earning its place. Sweep 2b settled it: dense contributes unique
+documents (15.2% of interleaving's fused top 10) and no measurable recall,
+with every fusion arm returning Holm p = 1.0000 against BM25 alone. A sweep
+over embedding models is now a sweep over a component that is not in the
+pipeline. Its budget moves to reranking and to the paraphrase validity
+test. Dropping a planned experiment because the pipeline moved is a result,
+not an omission.
 
-**Fusion is capped at one exploratory run.** A perfect fusion could reach
-0.644 against BM25's 0.584, and +0.059 is inside this gold set's noise
-floor. The run covers RRF at k=1 and k=10 plus plain rank interleaving,
-reported together and labelled post-hoc, because choosing the constant
-after seeing that k=60 failed is a post-hoc choice however well motivated
-the mechanism argument is.
+**Fusion was capped at one exploratory run, and it is now closed.** The
+run covered RRF at k=1 and k=10 plus plain rank interleaving, labelled
+post-hoc because choosing a constant after seeing that k=60 failed is a
+post-hoc choice however well motivated the mechanism argument is. Result:
+null, with the tuning-free control landing on BM25's exact score. The
+sweep-2b section records why the union ceiling was unreachable — fusion
+trades slots rather than adding them.
+
+**The seed for sweeps 3 onward is BM25 alone.**
+
+    seed:  fixed_512 / BM25 / k=10
+    order: reranking -> k -> (embedding model: dropped)
 
 **`_count_spans` moves into `rageval`.** Three scripts now carry private
 copies of the same pandas-dtype guard (13, 15, 16, and 17 has a fourth
@@ -1462,6 +1424,7 @@ variant). The bug it defends against — a column of only "0" and blanks
 inferred as float64, so `.isdigit()` counts nothing — already produced one
 wrong results table in sweep 1. Four copies is how a fix lands in three of
 them.
+
 ---
 
 ## Open items

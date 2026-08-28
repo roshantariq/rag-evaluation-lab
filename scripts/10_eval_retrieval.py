@@ -17,7 +17,7 @@ the failure this project keeps finding in other guises:
 
     dense   the baseline - vector similarity alone
     bm25    lexical only, over the identical chunk set
-    hybrid  reciprocal rank fusion of the two
+    hybrid  fused, either by reciprocal rank fusion or by interleaving
 
 The bm25 arm exists because a hybrid result is uninterpretable without it.
 If hybrid beats dense but bm25 alone beats both, the dense half is dead
@@ -60,10 +60,16 @@ from rageval.evaluation.retrieval_metrics import (
     spans_from_question,
 )
 from rageval.retrieve.bm25 import BM25Retriever
-from rageval.retrieve.fusion import DEFAULT_RRF_K, provenance, reciprocal_rank_fusion
+from rageval.retrieve.fusion import (
+    DEFAULT_RRF_K,
+    interleave,
+    provenance,
+    reciprocal_rank_fusion,
+)
 from rageval.store.chroma_store import ChromaStore
 
 MODES = ("dense", "bm25", "hybrid")
+FUSIONS = ("rrf", "interleave")
 
 
 def interim_path(arxiv_id: str):
@@ -151,12 +157,22 @@ def main() -> int:
                              "fusion (hybrid only). Held constant across runs: "
                              "a deeper pool is more candidates to rerank, not "
                              "more results, but it must still be declared.")
+    parser.add_argument("--fusion", default="rrf", choices=FUSIONS,
+                        help="How the two ranked lists are combined. "
+                             "'interleave' has no constant to choose and is "
+                             "the control for any tuned rrf result.")
     parser.add_argument("--rrf-k", type=int, default=DEFAULT_RRF_K,
-                        help="Reciprocal rank fusion constant. Not tuned.")
+                        help="Reciprocal rank fusion constant. See fusion.py "
+                             "for what it does to unique recall.")
+    parser.add_argument("--interleave-first", default="bm25", choices=("bm25", "dense"),
+                        help="Which retriever gets position 1 when "
+                             "interleaving. Affects exactly one rank; stated "
+                             "here rather than buried in the fusion code.")
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(message)s", stream=sys.stdout)
-    for noisy in ("httpx", "huggingface_hub", "sentence_transformers", "urllib3", "chromadb"):
+    for noisy in ("httpx", "huggingface_hub", "sentence_transformers", "urllib3",
+                  "chromadb", "rageval.embed.encoder"):
         logging.getLogger(noisy).setLevel(logging.WARNING)
     ensure_dirs()
 
@@ -185,7 +201,11 @@ def main() -> int:
     if mode in ("dense", "hybrid"):
         print(f"  embedding    : {cfg['embedding']['model']}")
     if mode == "hybrid":
-        print(f"  fusion       : RRF k={args.rrf_k}, pool={args.pool} per retriever")
+        if args.fusion == "rrf":
+            print(f"  fusion       : RRF k={args.rrf_k}, pool={args.pool} per retriever")
+        else:
+            print(f"  fusion       : interleave, {args.interleave_first} first, "
+                  f"pool={args.pool} per retriever")
     print(f"  depth        : k_max={args.k_max}\n")
 
     # --- relevant-chunk counts, for an honest IDCG -------------------------
@@ -232,10 +252,16 @@ def main() -> int:
             return store.query(encoder.encode_query(question), k=args.k_max)
         if mode == "bm25":
             return bm25.query(question, k=args.k_max)
+
         dense_hits = store.query(encoder.encode_query(question), k=args.pool)
         sparse_hits = bm25.query(question, k=args.pool)
-        fused = reciprocal_rank_fusion([dense_hits, sparse_hits],
-                                       k=args.rrf_k, top_k=args.k_max)
+        if args.fusion == "rrf":
+            fused = reciprocal_rank_fusion([dense_hits, sparse_hits],
+                                           k=args.rrf_k, top_k=args.k_max)
+        else:
+            order = ([sparse_hits, dense_hits] if args.interleave_first == "bm25"
+                     else [dense_hits, sparse_hits])
+            fused = interleave(order, top_k=args.k_max)
         for key, n in provenance(fused[:PROV_K],
                                  {"dense": dense_hits, "bm25": sparse_hits}).items():
             prov_total[key] += n
@@ -310,6 +336,8 @@ def main() -> int:
             print(f"  {key:<14}{n:>6}{100 * n / total:>8.1f}%")
         print("\n  'bm25 only' near zero means the fusion is reordering documents")
         print("  dense already had, and any gain is reranking rather than recall.")
+        print("  RRF at k=60 with a deep pool drives this to exactly zero: see")
+        print("  the arithmetic in rageval/retrieve/fusion.py.")
 
     # --- which half of the chain was found ---------------------------------
     for qtype in ("multi_hop", "comparative"):

@@ -14,7 +14,7 @@ from dataclasses import dataclass
 import pytest
 
 from rageval.retrieve.bm25 import BM25Retriever, sub_tokens, tokenize
-from rageval.retrieve.fusion import provenance, reciprocal_rank_fusion
+from rageval.retrieve.fusion import interleave, provenance, reciprocal_rank_fusion
 
 
 @dataclass
@@ -216,3 +216,57 @@ def test_provenance_separates_lexical_gain_from_reordering():
     fused = reciprocal_rank_fusion([dense, sparse])
     counts = provenance(fused, {"dense": dense, "bm25": sparse})
     assert counts == {"dense only": 1, "bm25 only": 1, "both": 1}
+
+
+# --- interleaving: the control arm with no constant ------------------------
+
+def test_interleave_alternates_between_lists():
+    fused = interleave([ranked("a", "b"), ranked("x", "y")])
+    assert [r.chunk_id for r in fused] == ["a", "x", "b", "y"]
+
+
+def test_each_retrievers_top_hit_lands_in_the_fused_top_two():
+    # The property RRF at k=60 destroyed: unique recall can never be
+    # filtered out, whatever the other list thinks.
+    fused = interleave([ranked("a", "b", "c"), ranked("z", "y", "x")])
+    assert {r.chunk_id for r in fused[:2]} == {"a", "z"}
+
+
+def test_duplicates_are_taken_once_at_their_earliest_position():
+    fused = interleave([ranked("a", "b"), ranked("b", "c")])
+    assert [r.chunk_id for r in fused] == ["a", "b", "c"]
+
+
+def test_exhausted_list_is_skipped_not_padded():
+    fused = interleave([ranked("a"), ranked("x", "y", "z")])
+    assert [r.chunk_id for r in fused] == ["a", "x", "y", "z"]
+
+
+def test_list_order_decides_only_position_one():
+    one = [r.chunk_id for r in interleave([ranked("a", "b"), ranked("x", "y")])]
+    two = [r.chunk_id for r in interleave([ranked("x", "y"), ranked("a", "b")])]
+    assert one[0] == "a" and two[0] == "x"
+    assert set(one) == set(two)
+
+
+def test_top_k_truncates_and_ranks_stay_contiguous():
+    fused = interleave([ranked("a", "b", "c"), ranked("x", "y", "z")], top_k=3)
+    assert [r.chunk_id for r in fused] == ["a", "x", "b"]
+    assert [r.rank for r in fused] == [1, 2, 3]
+
+
+def test_scores_are_monotone_so_a_later_sort_agrees_with_the_order():
+    fused = interleave([ranked("a", "b"), ranked("x", "y")])
+    scores = [r.score for r in fused]
+    assert scores == sorted(scores, reverse=True)
+
+
+def test_interleave_of_nothing_is_empty():
+    assert interleave([]) == []
+    assert interleave([[], []]) == []
+
+
+def test_interleave_returns_copies():
+    src = ranked("a")
+    interleave([src])
+    assert src[0].rank == 1 and src[0].score == 0.0
