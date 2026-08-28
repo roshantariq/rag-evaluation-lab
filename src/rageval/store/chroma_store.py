@@ -4,7 +4,6 @@ Chroma can embed documents itself, but then the embedding cache is bypassed
 and the model in use becomes implicit. Passing vectors in keeps one code
 path for embedding and makes the ablation's model axis explicit.
 """
-
 from __future__ import annotations
 
 import logging
@@ -23,7 +22,6 @@ _MAX_BATCH = 1000
 @dataclass
 class Retrieved:
     """One retrieval hit, carrying provenance for span-overlap scoring."""
-
     chunk_id: str
     arxiv_id: str
     text: str
@@ -105,6 +103,49 @@ class ChromaStore:
                     rank=rank,
                 )
             )
+        return out
+
+    def all_records(self, batch: int = _MAX_BATCH) -> list[Retrieved]:
+        """Every chunk in the collection, for retrievers that need the corpus.
+
+        Read out of the store rather than re-chunked from `data/interim/`:
+        a lexical index built from a rebuild could silently disagree with
+        the dense index it is being fused with - different chunk settings,
+        a stale extraction - and the entire claim of the hybrid arm is that
+        *only the retrieval function* differs. Taking both from the same
+        collection makes that true by construction rather than by
+        assumption.
+
+        `score` and `rank` are 0: these are corpus records, not hits.
+        """
+        out: list[Retrieved] = []
+        total = self.collection.count()
+        offset = 0
+        while offset < total:
+            res = self.collection.get(
+                limit=batch, offset=offset, include=["documents", "metadatas"]
+            )
+            ids = res.get("ids") or []
+            if not ids:
+                break
+            for cid, doc, meta in zip(ids, res["documents"], res["metadatas"]):
+                out.append(
+                    Retrieved(
+                        chunk_id=cid,
+                        arxiv_id=meta["arxiv_id"],
+                        text=doc or "",
+                        char_start=int(meta["char_start"]),
+                        char_end=int(meta["char_end"]),
+                        section=meta.get("section", ""),
+                        title=meta.get("title", ""),
+                        score=0.0,
+                        rank=0,
+                    )
+                )
+            offset += len(ids)
+        if len(out) != total:
+            logger.warning("  read %d records from a collection reporting %d",
+                           len(out), total)
         return out
 
     def count(self) -> int:
