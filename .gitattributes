@@ -1,0 +1,9 @@
+# Enforce LF in the repository and the working tree on every platform.
+# Windows tools (PowerShell redirection, some editors) otherwise write CRLF,
+# and a CRLF lockfile or gold file diffs as a whole-file change.
+* text=auto eol=lf
+
+# Files git must never touch
+*.pdf binary
+*.png binary
+*.sqlite binary
