@@ -95,7 +95,7 @@ Full plan, scope boundary, risk register, cost model and definition of done:
 ## 4. Layout and script map
 
 ```
-config/            baseline.yaml, sweep_*.yaml
+config/            baseline.yaml (bm25 since sweep 2), dense_phase5.yaml, sweep_*.yaml
 data/
   raw/             PDFs                      [gitignored]
   interim/         extracted text            [gitignored, FROZEN]
@@ -120,6 +120,12 @@ tests/             test_bm25.py, test_chunking.py, test_extract.py, test_gold.py
                    test_pipeline.py, test_retrieval_metrics.py
                    (155 tests, all passing, 28 Oct 2026)
 ```
+
+**`results/tables/retrieval_baseline.csv` holds the Phase 5 DENSE run**,
+not the current `baseline.yaml` (BM25). The `baseline` tag must never be
+overwritten: comparisons, the oracle ceiling and the truncation diagnostic
+all read it. `10_eval_retrieval.py` defaults to `--tag baseline`, so always
+pass `--tag`. To re-run dense, use `--config dense_phase5.yaml`.
 
 Scripts in use (run `dir scripts` for the full list):
 

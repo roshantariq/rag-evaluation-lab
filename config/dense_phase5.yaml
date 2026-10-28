@@ -1,0 +1,32 @@
+# The Phase 5 dense baseline, preserved verbatim from baseline.yaml before
+# sweep 2 redefined the baseline as BM25. Kept so the dense arm stays
+# re-runnable by name.
+#
+# results/tables/retrieval_baseline.csv holds THIS run (dense, Phase 5).
+# The `baseline` tag must never be overwritten: every Phase 5-6 comparison,
+# the oracle ceiling and the truncation diagnostic read that file.
+#
+# retrieval.k is 5 for generation only; the harness scores every k up to
+# --k-max. Generation needs k>5 (Phase 5: zero of 32 two-span questions had
+# both spans retrieved at k=5). Sweep 4 decides the value.
+chunking:
+  strategy: fixed_512
+  target_tokens: 512
+  overlap_tokens: 0
+
+embedding:
+  model: sentence-transformers/all-MiniLM-L6-v2
+
+index:
+  collection: baseline_fixed512_minilm
+
+retrieval:
+  mode: dense             # dense | bm25 | hybrid
+  k: 5                    # generation needs k>5; sweep 4 decides
+
+generation:
+  provider: openai          # or "azure"
+  model: gpt-4o-mini
+  temperature: 0.0          # determinism matters: ablations must be comparable
+  max_tokens: 700
+  prompt_strategy: abstain  # naive | abstain | abstain_confidence
