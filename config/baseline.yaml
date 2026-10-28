@@ -1,19 +1,38 @@
-# The deliberately unoptimised baseline. Every ablation is measured
-# against this, so it changes only when the baseline itself is redefined.
+# The baseline every later ablation is measured against. It changes only
+# when the baseline itself is redefined.
+#
+# Redefined by sweep 2: retrieval.mode dense -> bm25. BM25 beat dense by
+# +0.168 span recall at the 20k budget, CI [+0.082, +0.253], Holm p = 0.0069,
+# selected in 93.2% of half-splits — both halves of the pre-registered
+# switching rule. The effect size is bounded by the authoring confound
+# (docs/build-log.md, sweep 2). The Phase 5 dense version is preserved as
+# config/dense_phase5.yaml.
+#
+# results/tables/retrieval_baseline.csv holds the Phase 5 DENSE run, not
+# this configuration. The `baseline` tag must never be overwritten; give
+# runs of this config their own tag (the BM25 run is `bm25`).
+# 10_eval_retrieval.py defaults to --tag baseline, so always pass --tag.
+#
+# retrieval.mode is read only by 10_eval_retrieval.py. 04_search.py,
+# 05_ask.py and RAGPipeline are dense-only and ignore it.
+#
+# retrieval.k is 5 for generation only; the harness scores every k up to
+# --k-max. Generation needs k>5 (Phase 5: zero of 32 two-span questions had
+# both spans retrieved at k=5). Sweep 4 decides the value.
 chunking:
   strategy: fixed_512
   target_tokens: 512
   overlap_tokens: 0
 
 embedding:
-  model: sentence-transformers/all-MiniLM-L6-v2
+  model: sentence-transformers/all-MiniLM-L6-v2   # builds the index; unused by bm25 retrieval
 
 index:
   collection: baseline_fixed512_minilm
 
 retrieval:
-  mode: dense             # dense | bm25 | hybrid
-  k: 5
+  mode: bm25              # dense | bm25 | hybrid  (was dense until sweep 2)
+  k: 5                    # generation needs k>5; sweep 4 decides
 
 generation:
   provider: openai          # or "azure"
