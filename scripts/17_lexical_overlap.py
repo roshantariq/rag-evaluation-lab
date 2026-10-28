@@ -32,6 +32,11 @@ Terciles of ~19 questions are underpowered on purpose - the criterion was
 declared on terciles, so terciles decide it. A median split (29 vs 29) is
 reported underneath as a power check, and the two should agree in
 direction. If they disagree, believe neither and say so.
+
+Writes two tables: per-question overlap to results/tables/lexical_overlap.csv
+(--out), and the tercile, median-split and interaction statistics to
+results/tables/lexical_overlap_groups_B20000.csv, or _k10 at --k 10
+(--groups-out).
 """
 
 from __future__ import annotations
@@ -180,6 +185,9 @@ def main() -> int:
     parser.add_argument("--boot", type=int, default=10_000)
     parser.add_argument("--seed", type=int, default=20260827)
     parser.add_argument("--out", default=None, help="Per-question CSV path.")
+    parser.add_argument("--groups-out", default=None,
+                        help="Tercile / median / interaction CSV path (default "
+                             "results/tables/lexical_overlap_groups_<metric>.csv).")
     args = parser.parse_args()
 
     col = f"hit_spans@{args.k}" if args.k else f"hit_spans@B{args.budget}"
@@ -331,7 +339,39 @@ def main() -> int:
     print("  questions name two models and so carry more rare terms), and with")
     print("  evidence span length, which the Phase 6 miss audit already found")
     print("  predicts hit rate on its own.")
-    print(f"\n  per-question overlap -> {out_path}\n")
+    # --- the table the build log cites ------------------------------------
+    # Written after every number above is computed, so adding it draws
+    # nothing from the RNG and leaves the printed intervals unchanged.
+    common = {"metric": label, "boot": args.boot, "seed": args.seed}
+    grows = []
+    for split, groups in (("tercile", tg), ("median", hg)):
+        for name, g in groups.items():
+            grows.append({
+                "split": split, "group": name, "n": g["n"], "spans": g["spans"],
+                f"recall_{args.dense}": g[args.dense],
+                f"recall_{args.lexical}": g[args.lexical],
+                "delta": g["delta"], "ci_lo": g["lo"], "ci_hi": g["hi"],
+                "ratio_low_high": float("nan"), **common,
+            })
+    grows.append({
+        "split": "interaction", "group": "high minus low",
+        "n": len(lo_ids) + len(hi_ids),
+        "spans": tg["low overlap"]["spans"] + tg["high overlap"]["spans"],
+        f"recall_{args.dense}": float("nan"),
+        f"recall_{args.lexical}": float("nan"),
+        "delta": d_high - d_low, "ci_lo": float(i_lo), "ci_hi": float(i_hi),
+        "ratio_low_high": ratio, **common,
+    })
+    metric = f"k{args.k}" if args.k else f"B{args.budget}"
+    groups_path = Path(args.groups_out) if args.groups_out else (
+        TABLES_DIR / f"lexical_overlap_groups_{metric}.csv")
+    # Unlink first: a failed write must not leave the previous run's table
+    # in place reading as this run's result.
+    groups_path.unlink(missing_ok=True)
+    pd.DataFrame(grows).to_csv(groups_path, index=False)
+
+    print(f"\n  per-question overlap -> {out_path}")
+    print(f"  group statistics     -> {groups_path}\n")
     return 0
 
 
