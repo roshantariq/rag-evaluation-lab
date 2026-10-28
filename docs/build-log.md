@@ -1446,6 +1446,30 @@ manipulation check, primary analysis and interval criterion are untouched.
 worksheet had 7 of 20 blocks authored and `gold_paraphrased.jsonl` did not
 exist.
 
+**Phase 6 statistics now have tables behind them.** The paired-test CIs,
+Holm p-values, win rates, optimism figures and tercile statistics quoted
+in sweeps 1, 2 and 2b existed only as terminal output, which breaks
+reproducibility. `15`, `16` and `17` now write CSVs, and the tables were
+regenerated from the committed retrieval CSVs with the original seeds:
+
+| sweep | tables |
+|---|---|
+| 1 | `paired_baseline_chunk256_chunk1024_B20000`, `stability_baseline_chunk256_chunk1024_{B20000,B10000,k10}` |
+| 2 | `paired_baseline_bm25_hybrid_B20000`, `stability_baseline_bm25_hybrid_B20000`, `lexical_overlap_groups_{B20000,k10}` |
+| 2b | `paired_bm25_hybrid_rrf1_hybrid_rrf10_hybrid_interleave_k20`, `stability_bm25_hybrid_rrf1_hybrid_rrf10_hybrid_interleave_k20` |
+
+**Every figure quoted above was reproduced exactly**, including the
+sweep 1 tie counts (447 and 764 of 4,000), sweep 2b's 2,187 exact ties, and
+the k=10 interaction CI [−0.003, +0.392]. No number in this log changes.
+
+*One caveat on provenance.* The regeneration ran in a cloud container with
+no Chroma index, and `17` computes IDF from the index. The two
+`lexical_overlap_groups_*` tables therefore took their per-question overlap
+from the committed `lexical_overlap.csv` rather than recomputing it. Given
+the same overlaps, the grouping and bootstrap are the code's own, and the
+output matches the log. A local re-run of `17` against the index would
+confirm the overlaps themselves.
+
 ---
 
 ## Open items
