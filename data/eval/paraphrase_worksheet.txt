@@ -1,0 +1,240 @@
+# PARAPHRASE WORKSHEET
+#
+# Rewrite each question to ask exactly the same thing in different
+# words. Type your version on the blank line after `paraphrase>`.
+#
+# RULES (fixed before any rewriting; see docs/paraphrase-protocol.md)
+#  1. The answer must not change. The same evidence must still
+#     answer it, and the reference answer must still be correct.
+#  2. Use NONE of the terms listed under `avoid:`. Sub-forms count -
+#     banning `ecmwf-ifs` also bans `ECMWF` and `IFS`.
+#  3. Describe rather than name. 'the graph neural network weather
+#     model' instead of a product name, where the description is
+#     unambiguous within this corpus.
+#  4. Keep it a natural question someone would actually type.
+#  5. If a question becomes genuinely ambiguous without one banned
+#     term, add a line `keep: <term>` in the block. Declared
+#     exceptions are counted; undeclared ones are rejected.
+#
+# Do not reorder or delete blocks. Run --build when finished.
+
+### a006
+# type    : ambiguous
+# overlap : 1.000
+# original: How is the ensemble generated?
+# answer  : The corpus describes several incompatible methods and the question does not say which system is meant. WeatherBench 2 describes the established operational NWP practice, in which an ensemble of typically 10 to 100 forecasts is run with perturbed initial conditions and sometimes perturbed model physics. GenCast instead generates its ensemble by diffusion sampling: each future atmospheric state is produced by iteratively refining a candidate initialised purely from noise, with a fresh noise sample at each step. The practical probabilistic benchmark proposes lagged ensembles, in which forecasts initialised at different times are treated as independent samples. A correct response should establish which system is being asked about.
+# evidence0: Currently, most models use re-analysis datasets, in particular ERA5, which would not be available in an operational setup and provide an potential 3 advantage over operational initial conditions (more details in Section 6.2). Another priority of WB2 is to emphasize the importance of probabilistic prediction. Weather forecasting is an inherently uncertain endeavor because of chaotic error growth (L...
+# evidence1: The representation of the global weather state, 𝑋, is comprised of 6 surface variables, and 6 atmospheric variables at 13 vertical pressure levels on a 0.25◦latitude-longitude grid (see Table B1 for details). The forecast horizon is 15 days, with 12 hours between successive steps 𝑡and 𝑡+ 1, so 𝑇= 30. GenCast is implemented as a conditional diffusion model (Karras et al., 2022; Sohl-Dickstein et al...
+# evidence2: Plain Language Summary 2023 was a seminal year for data-driven weather forecasts with several high-profile publications claiming that AI outperformed traditional physics-based approaches to weather forecasts. These claims are mostly supported by scoring deterministic forecasts, even though it is widely known that forecasting is a probabilistic problem. Probabilistic intercomparisons have proved ch...
+avoid: generated, how, ensemble
+paraphrase>What mechanism produces multiple independent forecasts?
+
+
+### c009
+# type    : comparative
+# overlap : 0.834
+# original: Both MoWE and the ensemble of data-driven weather prediction models for operational sub-seasonal forecasting combine several models rather than building a single standalone forecaster. What does each propose?
+# answer  : The operational sub-seasonal work proposes an ensemble of data-driven weather prediction models, training multiple models based on several architectures to demonstrate a multi-model data-driven approach, and further proposes a combined ensemble of both data-driven and traditional NWP models. MoWE argues that prior multi-model work stayed within a single architecture class or simply averaged across source models, which fails to exploit their heterogeneous capabilities; instead it learns to fuse the predictions of multiple pre-trained expert models at each grid point, conditioned on lead time, using a lightweight transformer-based gating network that assigns spatially and temporally varying weights to each expert.
+# evidence0: Multi-model approaches have also been explored in the realm of data-driven weather models but in a more limited sense – most works have focused on multi-model ensembling within a given architecture class [26, 8, 21, 20], often training the same model from different random seed initializations as a means of producing more model variability in ensemble forecasts. While promising, such an approach ma...
+# evidence1: Notably, models based on denoising diffusion (GenCast) or adverserial losses [Kunyu, Ni, 2023] have shown promise, even if they may be worse on RMSE. 4. Data-driven weather forecasting models have until now sought to establish themselves as the most accurate; however, no approach to leverage the strengths of various model architectures or a combination of data-driven and traditional NWP models has...
+avoid: sub-seasonal, mowe, standalone, forecaster, mo, building, sub, seasonal, propose, rather
+paraphrase>
+
+
+### c007
+# type    : comparative
+# overlap : 0.800
+# original: What training data did GraphCast and FuXi each use from ERA5?
+# answer  : GraphCast trained on 1979-2015 and validated on 2016-2017, freezing the training protocol before the test phase. FuXi was developed using 39 years of ERA5 reanalysis.
+# evidence0: We did not evaluate GraphCast’s 00z and 12z initializations, to avoid a mismatch between having a +9h 35 GraphCast: Learning skillful medium-range global weather forecasting Development phase 1979-2015 2016 2017 Test phase GraphCast <2018 1979-2015 2016 2017 2018 2019 2020 2021 GraphCast <2019 1979-2015 2016 2017 2018 2019 2020 2021 GraphCast <2020 1979-2015 2016 2017 2018 2019 2021 2020 GraphCast...
+# evidence1: FuXi is developed using 39 years of the ECMWF ERA5 reanalysis dataset. The performance evaluation demonstrates that FuXi has forecast performance comparable to ECMWF ensemble mean (EM) in 15-day forecasts. FuXi surpasses the skillful forecast lead time achieved by ECMWF HRES by extending the lead time for Z500 from 9.25 to 10.5 days and for T 2M from 10 to 14.5 days.
+avoid: did, fuxi, fu, xi, graphcast, graph, era5
+paraphrase>
+
+
+### m001
+# type    : multi_hop
+# overlap : 0.747
+# original: KARINA chose the foundation for its architecture by drawing on another weather model's success with the Swin transformer. In that other model's paper, why is the Swin Transformer used in place of global self-attention?
+# answer  : KARINA drew its inspiration from FuXi. The FuXi paper explains that global self-attention is infeasible for high-resolution inputs because its computational and memory complexity is quadratic with respect to the input size. The Swin Transformer addresses this by limiting the computation of self-attention to non-overlapping local windows, and its shifted-window mechanism restores cross-connections between those windows.
+# evidence0: In this study, we introduce a model named KIST’s Atmospheric Rhythm with Integrated Neural Algorithms (KARINA), a global weather forecasting model developed at a 2.5° resolution that combines ConvNext with Squeeze-and-Excitation Networks (SENet) technologies to enhance prediction accuracy. Drawing inspiration from the FuXi model’s success with the Swin transformer, we chose it as our foundation, i...
+# evidence1: Nevertheless, global self-attention is infeasible for processing high-resolution inputs due to its quadratic computational and memory complexity with FuXi: 15-day global weather forecasts 9 respect to the input size. Swin Transformer was proposed as a solution [24] to improve computational efficiency by limiting computation of self-attention only within the non-overlapping local windows. Besides, ...
+avoid: drawing, karina, chose, self-attention, foundation, success, swin, self
+paraphrase>
+
+
+### a002
+# type    : ambiguous
+# overlap : 0.722
+# original: How many vertical levels does the model use?
+# answer  : The question does not identify a model, and the corpus gives different answers for each. WeatherBench 2's table of models lists 137 levels for ERA5 and IFS HRES, 13 for Keisler and Pangu-Weather, 37 for GraphCast, 7 for SphericalCNN and 32 for NeuralGCM. GenCast's own paper describes 6 atmospheric variables at 13 vertical pressure levels, while GraphCast's describes 6 atmospheric variables across 37 levels. A correct response should ask which model is meant rather than supplying a single number.
+# evidence0: First, while attempting to be close to observations, ERA5 is a model simulation which is closer to the truth for some 4 Model/ Dataset Type Initial conditions ∆x Levels Training data Training resources Inference time ERA5 Reanalysis 0.25◦ 137 IFS HRES Forecast Operational 0.1◦ 137 ∼50 minutes (*) IFS ENS Forecast Operational 0.2◦ 137 ERA5 forecasts Hindcast ERA5 0.25◦ 137 Keisler (2022) Forecast E...
+# evidence1: The representation of the global weather state, 𝑋, is comprised of 6 surface variables, and 6 atmospheric variables at 13 vertical pressure levels on a 0.25◦latitude-longitude grid (see Table B1 for details). The forecast horizon is 15 days, with 12 hours between successive steps 𝑡and 𝑡+ 1, so 𝑇= 30. GenCast is implemented as a conditional diffusion model (Karras et al., 2022; Sohl-Dickstein et al...
+# evidence2: They include the total incident solar radiation at the top of the atmosphere, accumulated over 1 hour, the sine and cosine of the local time of day (normalized to [0, 1)), and the sine and cosine of the of year progress (normalized to [0, 1)). The constants c𝑖are static features: the binary land-sea mask, the geopotential at the surface, the cosine of the latitude, and the sine and cosine of the l...
+avoid: vertical, many, how, levels
+paraphrase>
+
+
+### m002
+# type    : multi_hop
+# overlap : 0.715
+# original: FuXi's cascaded models are fine-tuned following the approach of another model. In that model's own paper, how many gradient updates were used at each autoregressive step count during its training curriculum?
+# answer  : The approach is GraphCast's. GraphCast describes a curriculum in which the 1 AR-step model was fine-tuned for 1000 gradient updates each, on increasing numbers of autoregressive steps from 2 to 12.
+# evidence0: In addition, Fully-Sharded Data Parallel (FSDP) [36], bfloat16 floating point precision, and gradient check-pointing [37] are applied to reduce memory costs during model training. 3.3.2 Fine-tuning cascaded models After pre-training, the base FuXi model is first fine-tuned for optimal performance for 6-hourly forecasts spanning from 0 to 5 days (0-20 time steps). This fine-tuning process is perfor...
+# evidence1: These results suggest potential for combining multiple models with varying numbers of AR steps, e.g., for short, medium and long lead times, to capitalize on their respective advantages across the entire forecast horizon. The connection between number of autoregressive steps and blurring is discussed in Supplements Section 7.4.4. 7Each of these models were trained using a curriculum where the 1 AR...
+avoid: curriculum, cascaded, fine-tuned, updates, tuned, autoregressive, fuxi, gradient, fu, xi, fine, following
+paraphrase>One system adopts another model's progressive training strategy; in that model's own paper, how many parameter adjustments occur at each phase, and over what range?
+
+
+### f019
+# type    : factual
+# overlap : 0.706
+# original: When GenCast is initialised from deterministic ERA5 analysis rather than EDA-perturbed initial conditions, on what proportion of targets does it still outperform ENS?
+# answer  : 96% of ensemble-mean RMSE targets and 97% of CRPS targets.
+# evidence0: Blue indicates GenCast initialised with deterministic ERA5 analysis is performing marginally better, Red indicates GenCast with EDA-perturbed initial conditions is performing marginally better. 65 GenCast: Diffusion-based ensemble forecasting for medium-range weather GenCast (No EDA init) vs ENS scorecards (±20.0%) 1 3 5 7 10 15 Lead time (days) Figure F29 | CRPS and RMSE scorecards comparing GenC...
+avoid: eda-perturbed, initialised, eda, perturbed, targets, gencast, gen, ens, still, deterministic, conditions
+paraphrase>
+
+
+### m015
+# type    : multi_hop
+# overlap : 0.671
+# original: A rain-code fusion method for precipitation forecasting takes a sequence-to-sequence convolutional recurrent network as its baseline. In that baseline's own paper, what evidence is given about the effect of state-to-state kernel size?
+# answer  : The baseline is ConvLSTM. Its paper reports that when the state-to-state transition uses a 1 x 1 kernel the result becomes much worse, because spatiotemporal motion patterns are hard to capture, and that networks with larger state-to-state kernels perform better. It explains the mechanism: with a 1 x 1 kernel the receptive field of the states does not grow as time advances, whereas with larger kernels later states have larger receptive fields and relate to a wider range of the input.
+# evidence0: However, it is not yet completely solved to forecast long-range future outputs from the previous spatiotemporal inputs. This paper proposes a new insight “rain-code” feature based on the multi-frame inputs using a standard ConvLSTM algorithm. We present training results for rain-code based precipitation forecasting using real-world spatiotemporal data. Fig. 1. Ordinary single-frame unit input and ...
+# evidence1: Although the number of parameters of the new 2-layer network is close to the original one, the result becomes much worse because it is hard to capture the spatiotemporal motion patterns with only 1×1 state-to-state transition. Meanwhile, the new 3-layer network performs better than the new 2-layer network since the higher layer can see a wider scope of the input. Nevertheless, its performance is i...
+avoid: rain-code, sequence-to-sequence, state-to-state, evidence, fusion, code, kernel, rain, sequence, baseline
+paraphrase>
+
+
+### m003
+# type    : multi_hop
+# overlap : 0.661
+# original: MetNet's temporal encoder processes downsampled time slices using a particular recurrent architecture. In the paper that introduced that architecture, what structure is used for spatiotemporal sequence forecasting?
+# answer  : The architecture is ConvLSTM. Its paper uses an encoding-forecasting structure built from two networks, an encoding network and a forecasting network, both formed by stacking ConvLSTM layers. The initial states and cell outputs of the forecasting network are copied from the last state of the encoding network, and all states in the forecasting network are concatenated and fed into a 1 x 1 convolutional layer to generate the final prediction.
+# evidence0: The target lead time represented by the integer y is concatenated at the input to indicate to MetNet the desired lead time for the prediction. The Spatial Downsampler encodes the time slices sampled every 15 minutes using a shared convolutional neural network. The Temporal Encoder processes the downsampled time slices in the direction of time using a Convolutional LSTM. The Spatial Aggregator uses...
+# evidence1: Although we cannot see these walls, we can infer their existence by finding the ball bouncing over them again and again, which can hardly be done if the boundary points have the same state transition dynamics as the inner points. 3.2 Encoding-Forecasting Structure Like FC-LSTM, ConvLSTM can also be adopted as a building block for more complex structures. For our spatiotemporal sequence forecasting...
+avoid: slices, downsampled, metnet, met, encoder, sequence, processes
+paraphrase>
+
+
+### m016
+# type    : multi_hop
+# overlap : 0.632
+# original: A precipitation nowcasting survey notes that some methods use a model able to actively learn a location-variant structure for recurrent connections. In that model's own paper, what loss measures are proposed to handle imbalanced rainfall, and on what grounds?
+# answer  : The model is TrajGRU. Its paper proposes the Balanced Mean Squared Error (B-MSE) and Balanced Mean Absolute Error (B-MAE), which assign more weight to heavier rainfalls when computing MSE and MAE. The justification is that proportions of rainfall events at different rain-rate thresholds are highly imbalanced, with heavier rainfall occurring less often but having higher real-world impact. The paper reports finding the balanced variants more consistent with overall nowcasting performance across multiple rain-rate thresholds, and that training with balanced losses is essential for good performance at higher thresholds.
+# evidence0: In fact, PredRNN proposed Spatiotemporal LSTM unit (ST-LSTM) that contains double memory mechanism combining time memory updated horizontally with the spatial memory transformed vertically. PredRNN++ makes PredRNN model deeper in time by leveraging a new recurrent structure named Causal LSTM with cascaded dual memories. Some methods (Tran & Song, 2019; Franch et al., 2020) used TrajGRU (Shi et al....
+# evidence1: To take into account this setting, we use two testing protocols in our benchmark: the offline setting in which the algorithm can only use a fixed window of the previous radar echo maps and the online setting in which the algorithm is free to use all the historical data and any online learning algorithm. Another issue for the precipitation nowcasting task is that the proportions of rainfall events ...
+avoid: actively, location-variant, imbalanced, handle, connections, measures, variant, recurrent, location, learn, rainfall
+paraphrase>
+
+
+### f009
+# type    : factual
+# overlap : 0.624
+# original: In which direction do GraphCast's Mesh2Grid edges pass information?
+# answer  : Unidirectionally, from sender mesh nodes to receiver grid nodes.
+# evidence0: 27 GraphCast: Learning skillful medium-range global weather forecasting Mesh2Grid edges EM2G are unidirectional edges that connect sender mesh nodes to receiver grid nodes.
+avoid: mesh2grid, edges, mesh, graphcast, graph
+paraphrase>Which direction do the links between the irregular computational nodes and the regular forecast grid carry information?
+
+
+### a005
+# type    : ambiguous
+# overlap : 0.621
+# original: What is the skillful forecast lead time?
+# answer  : The question is ambiguous because skillful lead time depends on both the variable and the model. FuXi reports that it improves the skillful lead time of all eight variables examined, but by very different amounts: for 2-metre temperature it extends the lead time from 10 days for both ECMWF HRES and GraphCast to 14.5 days, while for 500 hPa geopotential the improvement is from 9.25 days for ECMWF HRES and 9.5 days for GraphCast to 10.5 days for FuXi. A correct response should establish which variable and which model are meant, since the answers span roughly four days.
+# evidence0: However, the performance of the single FuXi base model deteriorates significantly as lead times increase, primarily due to accumulation error. Fig. A.1: Comparison of the globally-averaged latitude-weighted ACC of the FuXi system (red lines) and FuXi without cascade (gray lines) using testing data from 2018. B Skillful forecast lead time comparison Figure B.2 compares the skillful forecast lead ti...
+# evidence1: FuXi is developed using 39 years of the ECMWF ERA5 reanalysis dataset. The performance evaluation demonstrates that FuXi has forecast performance comparable to ECMWF ensemble mean (EM) in 15-day forecasts. FuXi surpasses the skillful forecast lead time achieved by ECMWF HRES by extending the lead time for Z500 from 9.25 to 10.5 days and for T 2M from 10 to 14.5 days.
+avoid: skillful
+paraphrase>At what point in the forecast horizon does model accuracy fall below operational usefulness?
+
+
+### c012
+# type    : comparative
+# overlap : 0.608
+# original: How does each of GraphCast and FuXi represent the input weather state before its main network processes it?
+# answer  : GraphCast keeps the 0.25 degree latitude-longitude grid as 721 x 1440 = 1,038,240 grid nodes, each carrying 474 input features, and separately places mesh nodes uniformly around the globe on an R-refined icosahedral mesh. FuXi instead forms a data cube of 2 x 70 x 721 x 1440 from the two preceding time steps and 70 variables, then reduces it to C x 180 x 360 with C set to 1536 through joint space-time cube embedding, so the U-Transformer operates on a compressed representation before a fully connected layer produces the prediction.
+# evidence0: They include the total incident solar radiation at the top of the atmosphere, accumulated over 1 hour, the sine and cosine of the local time of day (normalized to [0, 1)), and the sine and cosine of the of year progress (normalized to [0, 1)). The constants c𝑖are static features: the binary land-sea mask, the geopotential at the surface, the cosine of the latitude, and the sine and cosine of the l...
+# evidence1: The input data combines both upper-air and surface variables and creates a data cube with dimensions of 2 × 70 × 721 × 1440, where 2, 70, 721, and 1440 represent the two preceding time steps (t −1 and t), the total number of input variables, latitude (H) and longitude (W) grid points, respectively. Firstly, the high-dimensional input data undergoes dimension reduction to C×180×360 through joint sp...
+avoid: fuxi, fu, xi, represent, processes, graphcast
+paraphrase>
+
+
+### m007
+# type    : multi_hop
+# overlap : 0.602
+# original: Searth Transformer describes an earlier model that trains four separate models under a hierarchical temporal aggregation strategy, the longest interval being 24 hours. In that earlier model's own paper, what name is given to the system and to its architecture?
+# answer  : The earlier model is Pangu-Weather. Its own paper names the entire end-to-end forecasting algorithm Pangu-Weather, and names the proposed model architecture 3D Earth-specific transformers, abbreviated 3DEST.
+# evidence0: Nevertheless, autoregressive fine-tuning necessitates constructing a complete computational graph over the entire forecast trajectory, resulting in GPU memory consumption that scales linearly with the forecast horizon. Due to hardware constraints, GraphCast was only able to learn weather evolution within a three-day window (12 steps), which is insufficient for medium-range forecasting. Multi-model...
+# evidence1: Based on the ERA5 data, the problem of weather forecast is clearly defined: given an initial time t0, the algorithm 4 TECHNICAL REPORT Terms Definition in this paper system The entire algorithm for end-to-end weather forecast model A deep network that produces one-time prediction initial time The time point that weather forecast is made at forecast time The time gap between observation and desired...
+avoid: longest, name, hierarchical, aggregation, separate, interval, strategy, being, 24, paper, hours
+paraphrase>In the earlier four-model setup, what labels are assigned to the overall system and its architecture?
+
+
+### c011
+# type    : comparative
+# overlap : 0.595
+# original: GenCast and FuXi-Extreme both build on diffusion models. What does each system apply the diffusion model to?
+# answer  : GenCast is implemented as a conditional diffusion model that generates the forecast itself: each future atmospheric state is produced by iteratively refining a candidate state initialised purely from noise, conditioned on the two previous atmospheric states, with the full trajectory generated autoregressively. FuXi-Extreme instead applies a denoising diffusion probabilistic model (DDPM) as a refinement step on forecasts that already exist, recovering finer-scale detail in the surface forecast data generated by the FuXi-Short model in 5-day forecasts.
+# evidence0: The representation of the global weather state, 𝑋, is comprised of 6 surface variables, and 6 atmospheric variables at 13 vertical pressure levels on a 0.25◦latitude-longitude grid (see Table B1 for details). The forecast horizon is 15 days, with 12 hours between successive steps 𝑡and 𝑡+ 1, so 𝑇= 30. GenCast is implemented as a conditional diffusion model (Karras et al., 2022; Sohl-Dickstein et al...
+# evidence1: Diffusion models [13–16] have recently attracted considerable attention in the field of computer vision due to their remarkable capability for generating highly detailed images. These models consist of two processes: a forward process, involving the gradual addition of Gaussian noise to the input data, and a reverse process, wherein the noisy data is progressively restored to the original input da...
+avoid: fuxi-extreme, gencast, gen, fu, xi, diffusion
+paraphrase>
+
+
+### m008
+# type    : multi_hop
+# overlap : 0.575
+# original: MAD-SmaAt-GNet extends a lightweight CNN architecture as its core model. In that core model's own paper, how does its parameter count compare with the other models it was evaluated against?
+# answer  : The core model is SmaAt-UNet. Its own paper reports that on precipitation maps from the Netherlands and binary cloud-coverage images of France, its prediction performance is comparable to the other examined models while using only a quarter of the trainable parameters.
+# evidence0: Among these models, convolutional neural networks (CNNs) are particularly effective for image-to-image prediction tasks. The SmaAt-UNet is a lightweight CNN based architecture that has demonstrated strong performance for precipitation nowcasting. This paper introduces the Multimodal Advection-Guided Small Attention GNet (MAD-SmaAt-GNet), which extends the core SmaAt-UNet by (i) incorporating an ad...
+# evidence1: We evaluate our approaches on a real-life datasets using precipitation maps from the region of the Netherlands and binary images of cloud coverage of France. The experimental results show that in terms of prediction performance, the proposed model is comparable to other examined models while only using a quarter of the trainable parameters. Preprint submitted to arXiv January 26, 2021 Abstract arX...
+avoid: mad-smaat-gnet, mad, lightweight, sma, extends, core, cnn
+paraphrase>In the paper for the convolutional network used by this advection-guided system, how does its parameter count compare with the other tested models?
+
+
+### m010
+# type    : multi_hop
+# overlap : 0.553
+# original: A study of tropical cyclone prediction reports that a 3D AI weather model beats ECMWF-IFS on ordinary cyclones but is about 9.4 percent worse on unusual cyclone paths. In that model's own paper, what change is proposed to accelerate it further?
+# answer  : The model is Pangu-Weather. Its own paper proposes training models with larger lead times, for example 72 hours, so as to reduce the number of temporal aggregations needed to reach a given forecast time, and notes this as a direction to explore in the near future.
+# evidence0: The mean distance error of Pangu-ECMWF ranges from 40.9–400.2 km for 6–120 forecast hours, which are on average 9.4% greater than those of ECMWF-IFS (ranging from 30.1–354.0 km) (Fig. 2e). This further confirms the conclusion that Pangu-Weather performs worse, compared with NWP models, in capturing the extreme nature of these unusual TC paths. On the other hand, it is also important to acknowledge...
+# evidence1: To further accelerate Pangu-Weather, we can train models with larger lead times (e.g., 72 hours) so as to reduce the number of temporal aggregations. We expect to explore this direction in the near future. 4.2 Results on Extreme Weather Events Extreme weather forecast plays a vital role of global weather forecast. Despite rare occurrence, extreme weather events like hurricanes can bring tremendous...
+avoid: 9.4, unusual, paths, ordinary, accelerate, ecmwf-ifs, reports, worse, 3d
+paraphrase>
+
+
+### f018
+# type    : factual
+# overlap : 0.521
+# original: How often does GraphCast-Perturbed outperform ENS on CRPS, and where are those wins concentrated?
+# answer  : On 27% of targets, concentrated at shorter lead times.
+# evidence0: Figure F11 further shows that GraphCast-Perturbed only outperforms ENS on CRPS in 27% of targets, which are concentrated at shorter lead times.
+avoid: graphcast-perturbed, concentrated, perturbed, ens, crps
+paraphrase>
+
+
+### m009
+# type    : multi_hop
+# overlap : 0.513
+# original: A mobile traffic forecasting paper adopts a recurrent architecture on the grounds that replacing dense connections with convolutions significantly reduces the number of parameters. In that architecture's own paper, what parameter counts and cross-entropy values are reported for it against fully-connected LSTM on Moving-MNIST?
+# answer  : The architecture is ConvLSTM. On the Moving-MNIST dataset its paper reports FC-LSTM-2048-2048 using 142,667,776 parameters with a cross entropy of 4832.49, against ConvLSTM(5x5)-5x5-256 using 13,524,496 parameters with 3887.94. The three-layer ConvLSTM(5x5)-5x5-128-5x5-64-5x5-64 is smaller still at 7,585,296 parameters and achieves the best cross entropy of 3670.85.
+# evidence0: We detail the proposed neural network architecture next. III. SEQUENCE-TO-SEQUENCE CONVLSTM Convolutional long short-term memories (ConvLSTMs) are a special class of recurrent neural networks that incorporate convolution operations into LSTM to extract correlations across both spatial and temporal dimensions. Compared to “vanilla” LSTM, the ConvLSTM replace the inner dense connections with convolu...
+# evidence1: We train all the LSTM models by minimizing the cross-entropy loss4 using back-propagation through time (BPTT) [2] and 3MNIST dataset: http://yann.lecun.com/exdb/mnist/ 4The cross-entropy loss of the predicted frame P and the ground-truth frame T is defined as −P i,j,k Ti,j,k log Pi,j,k + (1 −Ti,j,k) log(1 −Pi,j,k). 5 Table 1: Comparison of ConvLSTM networks with FC-LSTM network on the Moving-MNIST...
+avoid: moving-mnist, cross-entropy, mnist, mobile, entropy, dense, connections, moving, traffic, recurrent, reduces, cross
+keep: traffic
+paraphrase>In the original paper for that traffic-prediction architecture, what parameter totals and loss values are reported in its comparison with fully connected LSTM on the digit-motion benchmark?
+
+
+### a004
+# type    : ambiguous
+# overlap : 0.511
+# original: How many days ahead does FuXi forecast?
+# answer  : The corpus contains several distinct FuXi systems and the answer depends on which is meant. FuXi itself cascades FuXi-Short, FuXi-Medium and FuXi-Long to produce complete 15-day forecasts. FuXi-Extreme applies its diffusion model to the surface forecast data generated by FuXi in 5-day forecasts. FuXi-RTM extends lead times by recursively feeding its outputs back as inputs, continuing to a horizon that is typically 10 days in its experiments. A correct response should establish which FuXi system the question refers to rather than giving a single horizon.
+# evidence0: Finally, FuXi-Short, FuXi-Medium, and FuXi-Long are cascaded to produce the complete 15-day forecasts. As detailed in Appendix B, cascade helps to reduce accumulation errors and improve forecast performance for longer lead times. During the fine-tuning process, the model was trained using a constant learning rate of 1×10−7. It takes approximately two days to fine-tune each of the cascaded FuXi mod...
+# evidence1: However, ML models face a common challenge: as forecast lead times increase, they tend to generate increasingly smooth predictions, leading to an underestimation of the intensity of extreme weather events. To address this challenge, we developed the FuXi-Extreme model, which employs a denoising diffusion probabilistic model (DDPM) to restore finer-scale details in the surface forecast data generat...
+# evidence2: The FuXi model takes as input two consecutive global atmospheric state data cubes Xt, Xt−1 and aims to predict the atmospheric state at the next time step bXt+1. As an autore- gressive model, FuXi extends forecast lead times by recursively feeding its outputs back as inputs. This recursive process continues until reaching the desired forecast horizon (typically 10 days in our experiments). As show...
+avoid: fuxi, fu, xi
+paraphrase>
+
