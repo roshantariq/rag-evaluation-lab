@@ -117,8 +117,8 @@ src/rageval/
   config.py        CHROMA_DIR, CONFIG_DIR, EMBED_CACHE, EVAL_DIR, INTERIM_DIR, TABLES_DIR
   pipeline.py      RAGPipeline, parse_citations, detect_abstention
 tests/             test_bm25.py, test_chunking.py, test_extract.py, test_gold.py,
-                   test_pipeline.py, test_retrieval_metrics.py
-                   (155 tests, all passing, 28 Oct 2026)
+                   test_paraphrase_result.py, test_pipeline.py,
+                   test_retrieval_metrics.py (172 tests, all passing, 28 Oct 2026)
 ```
 
 **`results/tables/retrieval_baseline.csv` holds the Phase 5 DENSE run**,
@@ -149,7 +149,7 @@ Scripts in use (run `dir scripts` for the full list):
 | `16_paired_test.py` | McNemar exact + cluster bootstrap + Holm correction |
 | `17_lexical_overlap.py` | the authoring-confound diagnostic |
 | `18_paraphrase_worksheet.py` | emit / validate the paraphrase worksheet |
-| `19_paraphrase_result.py` | **not yet written** — criterion fixed in `docs/paraphrase-protocol.md` |
+| `19_paraphrase_result.py` | scores the paraphrase test against the protocol's interval rule → `paraphrase_result.csv` |
 
 Three unnumbered diagnostics also exist: `diagnose_chunks.py`,
 `diagnose_extraction.py`, `verify_blob_strip.py`.
@@ -417,11 +417,15 @@ questions falls by more than 0.15 against the same questions' originals,
 treat it as a broken-question warning, re-read every rewrite, and report the
 warning whatever the primary result says.
 
-**Then write `19_paraphrase_result.py`.** Its criterion is already fixed in
-the protocol as a three-way interval rule, including an explicit
-"inconclusive" outcome — at 20 questions and ~40 spans that is a likely
-result and must be admissible in advance, so a wide interval is not written
-up afterwards as evidence of no effect.
+**`19_paraphrase_result.py` is written**, before the paraphrased runs
+exist, so the analysis cannot be shaped by their result. It implements the
+protocol's three-way interval rule, including the explicit "inconclusive"
+outcome — at 20 questions and ~40 spans that is a likely result and was
+admissible in advance, so a wide interval is not written up afterwards as
+evidence of no effect. The pre-registered constants are module constants,
+not flags, and `tests/test_paraphrase_result.py` pins them. It scores both
+metrics the protocol names (20k budget and k=20) and, if they disagree,
+reports both without choosing.
 
 ---
 
