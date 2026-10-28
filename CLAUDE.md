@@ -100,8 +100,8 @@ data/
   raw/             PDFs                      [gitignored]
   interim/         extracted text            [gitignored, FROZEN]
   eval/            manifest + gold set       [COMMITTED — the deliverable]
-docs/              build-log.md, dependancies.md (sic), extraction.md,
-                   paraphrase-protocol.md [NOT YET COMMITTED]
+docs/              build-log.md, dependencies.md, extraction.md,
+                   paraphrase-protocol.md
 results/tables/    ablation CSVs             [committed]
 results/figures/   charts                    [created in Phase 8]
 scripts/           numbered pipeline entry points
