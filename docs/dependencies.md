@@ -54,6 +54,11 @@ repository's history. On 28 October 2026 it was transcoded to UTF-8 with LF
 and the self-pin replaced with `-e .`; no version changed. `.gitattributes`
 now enforces LF.
 
+`pywin32==312` is Windows-only and made `pip install -r` fail on Linux and
+macOS. It now carries the marker `; sys_platform == "win32"`, so it
+installs on Windows only. `pip freeze` drops markers, so re-add it after
+regenerating.
+
 Regenerate from the project root so the editable line stays `-e .`, and
 check that the result is UTF-8 with LF line endings.
 
@@ -65,7 +70,3 @@ check that the result is UTF-8 with LF line endings.
   cu128 wheel was ever installed is unresolved (CLAUDE.md §9). The lockfile
   pins `torch==2.13.0` with no CUDA suffix. When this is settled, record
   the wheel and index URL here.
-- **`pywin32==312`** is locked and is Windows-only, so
-  `pip install -r requirements.lock.txt` fails on Linux or macOS. That
-  matters for the Phase 9 fresh-clone check if it runs anywhere but
-  Windows.
