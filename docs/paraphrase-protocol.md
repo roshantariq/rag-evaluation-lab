@@ -149,10 +149,17 @@ python scripts/18_paraphrase_worksheet.py
 # fill every paraphrase> block by hand
 python scripts/18_paraphrase_worksheet.py --build
 
-python scripts/10_eval_retrieval.py --config baseline.yaml \
+python scripts/10_eval_retrieval.py --config dense_phase5.yaml \
     --gold data/eval/gold_paraphrased.jsonl --tag para_dense --k-max 50
 python scripts/10_eval_retrieval.py --config sweep_bm25.yaml \
     --gold data/eval/gold_paraphrased.jsonl --tag para_bm25 --k-max 50
 
 python scripts/19_paraphrase_result.py
 ```
+
+*Procedural correction, 28 October 2026.* The dense arm originally read
+`--config baseline.yaml`. Sweep 2 later redefined `baseline.yaml` as BM25,
+so that command would have run BM25 twice. The dense arm is now
+`dense_phase5.yaml`, the preserved Phase 5 dense configuration. Nothing
+else in this protocol changed, and no paraphrase run had happened. See
+`docs/build-log.md`, Plan amendments.

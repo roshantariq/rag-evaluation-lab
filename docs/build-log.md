@@ -1433,6 +1433,19 @@ inferred as float64, so `.isdigit()` counts nothing — already produced one
 wrong results table in sweep 1. Four copies is how a fix lands in three of
 them.
 
+**Paraphrase protocol: procedural correction, not a change of criterion.**
+`docs/paraphrase-protocol.md` and the next step printed by
+`18_paraphrase_worksheet.py` named the dense arm `--config baseline.yaml`.
+Sweep 2 redefined `baseline.yaml` as BM25 after the protocol was written,
+so that command would have scored the paraphrased set with BM25 twice and
+labelled one run `para_dense`. Both now name `dense_phase5.yaml`, which
+preserves the Phase 5 dense configuration verbatim. Only the filename
+identifying the dense arm changed. The design, selection rule,
+manipulation check, primary analysis and interval criterion are untouched.
+**No paraphrase run had happened at the time of the correction**: the
+worksheet had 7 of 20 blocks authored and `gold_paraphrased.jsonl` did not
+exist.
+
 ---
 
 ## Open items

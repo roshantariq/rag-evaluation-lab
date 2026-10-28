@@ -352,7 +352,7 @@ def build(args) -> int:
     print(f"\n  -> {PARA_GOLD}")
     print(f"  -> {out_csv}")
     print("\n  Next, holding everything else identical:")
-    print(f"    python scripts/10_eval_retrieval.py --config baseline.yaml "
+    print(f"    python scripts/10_eval_retrieval.py --config dense_phase5.yaml "
           f"--gold {PARA_GOLD} --tag para_dense --k-max 50")
     print(f"    python scripts/10_eval_retrieval.py --config sweep_bm25.yaml "
           f"--gold {PARA_GOLD} --tag para_bm25 --k-max 50")
