@@ -17,6 +17,14 @@ sweep, and a paraphrase validity test on the confound.
 **Done.** src-layout package, editable install, MIT licence, LF line endings
 enforced via `.gitattributes`.
 
+*Corrected 28 October 2026.* The line above overstated what was committed.
+No `LICENSE` file and no `.gitattributes` were ever in the repository until
+then. `requirements.lock.txt` itself showed the gap: PowerShell redirection
+had written it as UTF-16 with CRLF line endings, which LF enforcement would
+have caught. Both files were added, and the lockfile transcoded to UTF-8
+with LF, in commit `7a3539a`. The original claim stays above as it was
+written.
+
 ### Defects found
 
 **`ragas` imports a module `langchain-community` deleted.** `ragas` (all

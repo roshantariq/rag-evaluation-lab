@@ -1,7 +1,7 @@
 # CLAUDE.md — RAG Evaluation Lab
 
 Operating manual for this repository. Read this fully before acting. The
-narrative detail lives in `docs/build-log.md` (~1,300 lines); this file is
+narrative detail lives in `docs/build-log.md` (1,442 lines); this file is
 the orientation, the conventions, the current state and the rules that
 govern what counts as a result.
 
