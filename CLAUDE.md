@@ -685,7 +685,9 @@ All of these are things a capable agent will do helpfully and should not.
 
 - **Rebuild an index or clear the embedding cache.** Both are slow and the
   cache's provenance is already an open question (§9).
-- **`git push`.** Commit freely; the owner pushes.
+- **`git push` to `main`.** Commit freely and push your own `claude/*` work
+  branch so it survives the container; never push to `main`. The owner
+  merges.
 - **Re-run the full pipeline to "check" something.** Ask which single arm
   would settle it.
 - **Add, remove or reword a gold question.** See §3.
