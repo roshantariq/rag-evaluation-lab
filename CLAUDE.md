@@ -76,7 +76,7 @@ Full plan, scope boundary, risk register, cost model and definition of done:
   be valid for exactly one arm of the ablation.
 - **Chunk span provenance holds by construction:**
   `text[char_start:char_end] == chunk.text`. Verified across 300 randomised
-  documents × 6 chunker settings.
+  documents × 6 size/overlap settings.
 - **The gold set is closed at 74 questions.** Do not add, remove or reword
   questions. Changing it invalidates every prior comparison. (The paraphrase
   test in §8 writes a *separate* file; it does not touch the original.)
@@ -107,7 +107,8 @@ results/figures/   charts                    [created in Phase 8]
 scripts/           numbered pipeline entry points
 src/rageval/
   ingest/          arxiv_fetch.py, extract.py
-  chunking/        base.py (chunk_document, six strategies behind one interface)
+  chunking/        base.py (chunk_document: fixed-size token windows only;
+                   the `strategy` string is a label, not a dispatch)
   embed/           encoder.py (+ SQLite cache keyed on hash(model, text))
   store/           chroma_store.py (ChromaStore, Retrieved, all_records)
   retrieve/        bm25.py, fusion.py
@@ -436,8 +437,9 @@ up afterwards as evidence of no effect.
 4. **Chunk-quality filter ablation** (off / 0.3 / 0.4 / 0.5). An outstanding
    commitment from Phase 2b, which deferred it rather than applying a silent
    filter. Cheaper now — BM25 needs no embeddings.
-5. **Remaining chunking strategies** (section-aware, recursive, semantic)
-   under BM25. Sweep 1 only covered fixed sizes.
+5. **WRITE section-aware, recursive and semantic chunkers — they do not
+   exist — then sweep them under BM25.** `chunk_document` produces only
+   fixed-size token windows; sweep 1 covered sizes of that one strategy.
 6. **End-of-phase replication:** winning pipeline × {fixed_512, fixed_256}
    **under BM25**. Sweep 1 compared chunk sizes under *dense* retrieval, and
    BM25's length normalisation (b = 0.75) behaves nothing like an encoder
@@ -453,6 +455,11 @@ up afterwards as evidence of no effect.
   measurable recall, so this would sweep a component not in the pipeline.
   Executed per the condition written down after sweep 2.
 - **`fixed_128`** — underpowered once 256 and 512 proved indistinguishable.
+
+**Scope not met:** the build plan's six-chunker chunking axis. Only one
+chunker exists (fixed-size token windows, swept at three sizes). Item 5
+above is the work that closes it; until then any claim about "chunking
+strategy" is a claim about chunk size.
 
 **Then:** Phase 7 (generation evaluation — the stated headline, still
 untested), Phase 8 (analysis and write-up), Phase 9 (fresh-clone
