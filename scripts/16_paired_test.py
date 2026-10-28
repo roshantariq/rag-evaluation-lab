@@ -39,9 +39,8 @@ Usage:
     python scripts/16_paired_test.py baseline bm25 hybrid
     python scripts/16_paired_test.py baseline bm25 --k 10
 
-Writes one row per pair to results/tables/paired_<tags>.csv (override with
---out). Testing at a different budget or k writes to the same default
-path, so pass --out to keep both.
+Writes one row per pair to results/tables/paired_<tags>_<metric>.csv,
+e.g. paired_baseline_bm25_B20000.csv or _k10 (override with --out).
 """
 
 from __future__ import annotations
@@ -140,7 +139,7 @@ def main() -> int:
     parser.add_argument("--seed", type=int, default=20260827)
     parser.add_argument("--tables-dir", default=None)
     parser.add_argument("--out", default=None,
-                        help="CSV path (default results/tables/paired_<tags>.csv).")
+                        help="CSV path (default results/tables/paired_<tags>_<metric>.csv).")
     args = parser.parse_args()
 
     if len(args.tags) < 2:
@@ -152,6 +151,9 @@ def main() -> int:
         col, label = f"hit_spans@{args.k}", f"k={args.k}"
     else:
         col, label = f"hit_spans@B{args.budget}", f"budget {args.budget:,}"
+    # Filename suffix, following the oracle_*_k10 / _k50 convention, so a
+    # run at another budget or k does not overwrite this one.
+    metric = f"k{args.k}" if args.k is not None else f"B{args.budget}"
 
     runs = {}
     for tag in args.tags:
@@ -285,7 +287,7 @@ def main() -> int:
         "seed": args.seed,
     } for r in results]
     out_path = Path(args.out) if args.out else (
-        TABLES_DIR / f"paired_{'_'.join(tags)}.csv")
+        TABLES_DIR / f"paired_{'_'.join(tags)}_{metric}.csv")
     # Unlink first: a failed write must not leave the previous run's table
     # in place reading as this run's result.
     out_path.unlink(missing_ok=True)
