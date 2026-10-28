@@ -600,3 +600,91 @@ figures and the lockfile. Commit a pre-registration **before** the run it
 governs — a protocol landing in the same commit as its result is not a
 pre-registration. Tag `v1.0` only after the Phase 9 fresh-clone check
 passes.
+
+---
+
+## 13. Documentation duties
+
+These are not tidy-up for later. A sweep is not closed until all of this is
+done, and the next session inherits whatever you leave behind.
+
+**After every sweep, ablation, or significant change, in this order:**
+
+1. **`docs/build-log.md`** — append a section: what was built, what was
+   measured (with CI, Holm p and win rate), what was decided, what went
+   wrong, and the standing lesson. Falsified predictions stay in with their
+   original wording. Never delete a superseded number — supersede it in
+   place and say what it was and why it changed.
+
+2. **`CLAUDE.md` itself.** Update the **Status date** line, §5 if the
+   baseline configuration moved, §6 with the new result, §9 to strike what
+   is done and re-order what remains, §4 if a script was added, and §10 if a
+   new bug class was found. A stale CLAUDE.md is worse than none: the next
+   session will act on it.
+
+3. **`results/tables/`** — commit the CSVs the claims rest on. A number in
+   the build log with no table behind it is not reproducible, and
+   reproducibility is one of the three completion criteria.
+
+**Other docs, when triggered:**
+
+- **A new pre-registration gets its own file** — `docs/<name>-protocol.md`,
+  following `docs/paraphrase-protocol.md` as the pattern: purpose, design,
+  selection rule, manipulation check, primary analysis, and the criterion
+  stated as an interval with every outcome (including "inconclusive")
+  admissible in advance. **Commit it before the run it governs.** A protocol
+  landing in the same commit as its result is not a pre-registration.
+- **`docs/dependencies.md`** — on any pin, wheel, driver or environment
+  change, including resolving the open CUDA question in §9. Record what
+  changed and why, with the symptom it fixes.
+- **Plan changes** — recorded in the build log's `## Plan amendments`
+  section, never silently. Dropping a planned experiment because the
+  pipeline moved is a result, not an omission, and gets written up as one.
+
+**If CLAUDE.md and `docs/build-log.md` disagree, the build log wins.** It is
+the primary record; CLAUDE.md is a summary of it. Fix the summary.
+
+---
+
+## 14. Do not do these without asking
+
+All of these are things a capable agent will do helpfully and should not.
+
+- **Rebuild an index or clear the embedding cache.** Both are slow and the
+  cache's provenance is already an open question (§9).
+- **`git push`.** Commit freely; the owner pushes.
+- **Re-run the full pipeline to "check" something.** Ask which single arm
+  would settle it.
+- **Add, remove or reword a gold question.** See §3.
+- **Write the paraphrases.** See §8.
+- **Change a pre-registered criterion after seeing a result**, including
+  "clarifying" a threshold. Record the defect and honour the rule as
+  written; that has already happened once and is in the log as such.
+- **Install or upgrade a dependency** beyond what `requirements.lock.txt`
+  pins.
+
+## 15. Known gaps in this file
+
+- **MLflow.** The build plan's Phase 6 acceptance criterion is "17 logged
+  runs, re-runnable by run ID". What exists instead is tagged CSVs in
+  `results/tables/`, which is arguably better for reproducibility but is a
+  departure from a stated criterion that no document records. Either adopt
+  MLflow or write the deviation into the build log's `## Plan amendments` —
+  do not leave it undecided.
+- **Phase 7 operational detail**, which matters because it is next after
+  Phase 6:
+  - **RAGAS is the cost multiplier, not generation** — one answer can cost
+    five or more LLM calls. Set a hard spend cap in the OpenAI dashboard
+    before the first run and dry-run on 5 questions.
+  - Responses cache on the full request (model, temperature, system and user
+    prompt), so any prompt change is a deliberate cache miss.
+  - The three prompt strategies differ in exactly one respect by design, so
+    the comparison isolates the abstention instruction. Keep it that way.
+  - **Generation must be fed k > 5.** Zero of 32 two-span questions had both
+    passages retrieved at k=5, so a hallucination measured at k=5 would be a
+    retrieval artifact wearing a generation costume. The k used must be
+    reported.
+  - All 48 abstention labels are hand-verified. The regex is a first pass.
+- **Environment bootstrap** is not described here; `docs/dependencies.md` is
+  the reference, and the two pins in `pyproject.toml` carry their own
+  explanatory comments.
