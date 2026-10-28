@@ -676,11 +676,18 @@ done, and the next session inherits whatever you leave behind.
   pipeline moved is a result, not an omission, and gets written up as one.
 - **Claims in this file about the repo must be verified against the repo,
   not trusted.** CLAUDE.md was written from a chat session and drifted
-  within days: it referenced three files that had never been committed and
-  one with a misspelled name. When you read a path here, check it exists
-  before acting on it, and correct this file when it does not. The project's
-  own standing lesson applies to its documentation: a plausible claim is the
-  one that does not get audited.
+  within days, for two different reasons. It named
+  `docs/dependencies.md` while the repo held `docs/dependancies.md`: a
+  misspelled path. And it described the paraphrase protocol, script 18
+  and the worksheet as present when they were committed on the owner's
+  machine but not pushed, so a fresh clone had none of them: an unpushed
+  remote. The second cause looks exactly like the first from inside a
+  clone, and the first audit wrongly reported those files as never
+  committed. When you read a path here, check it exists before acting on
+  it; when it does not, fetch the remote and ask whether local work is
+  unpushed before concluding the claim is false, then correct this file.
+  The project's own standing lesson applies to its documentation: a
+  plausible claim is the one that does not get audited.
 
 **If CLAUDE.md and `docs/build-log.md` disagree, the build log wins.** It is
 the primary record; CLAUDE.md is a summary of it. Fix the summary.
