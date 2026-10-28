@@ -131,8 +131,8 @@ Scripts in use (run `dir scripts` for the full list):
 
 | script | purpose |
 |---|---|
-| `01_fetch_corpus.py` | arXiv search and PDF download |
-| `02_extract_text.py` | PDF → `data/interim/` (FROZEN output) |
+| `01_fetch_corpus.py` | arXiv search and PDF download — **DO NOT RUN — see §14** |
+| `02_extract_text.py` | PDF → `data/interim/` (FROZEN output) — **DO NOT RUN — see §14** |
 | `03_build_index.py` | chunk + embed + load a Chroma collection |
 | `04_search.py` | ad-hoc query against the index |
 | `05_ask.py` | end-to-end question → cited answer |
@@ -669,9 +669,19 @@ the primary record; CLAUDE.md is a summary of it. Fix the summary.
 
 ---
 
-## 14. Do not do these without asking
+## 14. Hard stops and ask-first
 
 All of these are things a capable agent will do helpfully and should not.
+
+**Hard stops — never:**
+
+- **Never run 01_fetch_corpus.py or 02_extract_text.py.** data/interim/ is
+  frozen and gold evidence is anchored to its exact byte offsets.
+  Regenerating it silently invalidates all 101 spans. In a cloud session
+  with no data/, the correct response to a missing index is to say so and
+  stop, not to rebuild it.
+
+**Ask first:**
 
 - **Rebuild an index or clear the embedding cache.** Both are slow and the
   cache's provenance is already an open question (§9).
@@ -685,11 +695,6 @@ All of these are things a capable agent will do helpfully and should not.
   written; that has already happened once and is in the log as such.
 - **Install or upgrade a dependency** beyond what `requirements.lock.txt`
   pins.
-- **Never run 01_fetch_corpus.py or 02_extract_text.py.** data/interim/ is
-  frozen and gold evidence is anchored to its exact byte offsets.
-  Regenerating it silently invalidates all 101 spans. In a cloud session
-  with no data/, the correct response to a missing index is to say so and
-  stop, not to rebuild it.
 
 ## 15. Known gaps in this file
 
