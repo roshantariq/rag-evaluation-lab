@@ -50,6 +50,10 @@ Usage:
     python scripts/15_selection_stability.py baseline chunk256 chunk1024
     python scripts/15_selection_stability.py baseline chunk256 --budget 10000
     python scripts/15_selection_stability.py baseline chunk256 --k 10
+
+Writes one row per run to results/tables/stability_<tags>.csv (override
+with --out). Selecting at a different budget or k writes to the same
+default path, so pass --out to keep both.
 """
 
 from __future__ import annotations
@@ -154,6 +158,8 @@ def main() -> int:
     parser.add_argument("--seed", type=int, default=20260827)
     parser.add_argument("--tables-dir", default=None,
                         help="Override results/tables (for testing).")
+    parser.add_argument("--out", default=None,
+                        help="CSV path (default results/tables/stability_<tags>.csv).")
     args = parser.parse_args()
 
     if len(args.tags) < 2:
@@ -324,6 +330,39 @@ def main() -> int:
     print("\n  Half-splits have less power than the full set by construction - that")
     print("  is the point, not a defect. A configuration that cannot survive being")
     print("  chosen on 29 questions was never separable on 58.\n")
+
+    # --- the table the build log cites ---------------------------------------
+    rows = []
+    for t in tags:
+        rows.append({
+            "run": t,
+            "metric": label,
+            "full_score": full[t],
+            "wins": wins[t],
+            "win_rate": wins[t] / n_sel,
+            "selection_half": float(np.mean(sel_scores[t])) if wins[t] else float("nan"),
+            "heldout_half": float(np.mean(out_scores[t])) if wins[t] else float("nan"),
+            "optimism": (float(np.mean(sel_scores[t])) - float(np.mean(out_scores[t])))
+                        if wins[t] else float("nan"),
+            "n_questions": len(ids),
+            "n_spans": int(n_ev.sum()),
+            "splits": args.splits,
+            "selections": n_sel,
+            "seed": args.seed,
+            "winner_mean_optimism": float(opt.mean()),
+            "winner_optimism_lo": float(lo),
+            "winner_optimism_hi": float(hi),
+            "winner_reselected": reselected / n_sel,
+            "mean_margin": float(np.mean(margins)),
+            "ties": ties,
+        })
+    out_path = Path(args.out) if args.out else (
+        TABLES_DIR / f"stability_{'_'.join(tags)}.csv")
+    # Unlink first: a failed write must not leave the previous run's table
+    # in place reading as this run's result.
+    out_path.unlink(missing_ok=True)
+    pd.DataFrame(rows).to_csv(out_path, index=False)
+    print(f"  -> {out_path}\n")
 
     return 0
 

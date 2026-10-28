@@ -38,6 +38,10 @@ dependency for it would be worse than writing it.
 Usage:
     python scripts/16_paired_test.py baseline bm25 hybrid
     python scripts/16_paired_test.py baseline bm25 --k 10
+
+Writes one row per pair to results/tables/paired_<tags>.csv (override with
+--out). Testing at a different budget or k writes to the same default
+path, so pass --out to keep both.
 """
 
 from __future__ import annotations
@@ -135,6 +139,8 @@ def main() -> int:
     parser.add_argument("--boot", type=int, default=10_000)
     parser.add_argument("--seed", type=int, default=20260827)
     parser.add_argument("--tables-dir", default=None)
+    parser.add_argument("--out", default=None,
+                        help="CSV path (default results/tables/paired_<tags>.csv).")
     args = parser.parse_args()
 
     if len(args.tags) < 2:
@@ -257,6 +263,34 @@ def main() -> int:
     print("  15_selection_stability.py is decisively above chance.")
     print("  Holm-adjusted p is the one to read: these pairs were all tested")
     print("  together, and an uncorrected p invites the multiplicity it ignores.\n")
+
+    # --- the table the build log cites ---------------------------------------
+    rows = [{
+        "a": r["a"],
+        "b": r["b"],
+        "metric": label,
+        "recall_a": recall(r["a"], all_idx),
+        "recall_b": recall(r["b"], all_idx),
+        "delta": r["delta"],
+        "ci_lo": r["lo"],
+        "ci_hi": r["hi"],
+        "a_only": r["b_only"],      # first run found, second missed
+        "b_only": r["c_only"],      # second run found, first missed
+        "discordant": r["discordant"],
+        "p": r["p"],
+        "p_holm": r["p_holm"],
+        "n_questions": len(ids),
+        "n_spans": total_spans,
+        "boot": args.boot,
+        "seed": args.seed,
+    } for r in results]
+    out_path = Path(args.out) if args.out else (
+        TABLES_DIR / f"paired_{'_'.join(tags)}.csv")
+    # Unlink first: a failed write must not leave the previous run's table
+    # in place reading as this run's result.
+    out_path.unlink(missing_ok=True)
+    pd.DataFrame(rows).to_csv(out_path, index=False)
+    print(f"  -> {out_path}\n")
 
     return 0
 
