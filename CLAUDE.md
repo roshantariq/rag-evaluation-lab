@@ -17,16 +17,24 @@ govern what counts as a result.
 These are not preferences to be optimised away. They were established over
 the whole project and they hold.
 
-- **Guide step by step. He runs every command himself.** Explain what a
-  command does and why before giving it. Do not run the pipeline for him.
-- **PowerShell only.** Never bash syntax, never `&&` chaining, never
-  forward-slash paths in commands. Quote the repo path — it contains a
-  space.
-- **Whole files, not patches.** When a file changes, emit the complete
-  file. His words: *"why not give me the entire code for this .py to avoid
-  confusion."* Targeted edits have twice caused the wrong version to be
-  saved; whole files are safer here even when wasteful.
-- **He pastes terminal output; you interpret it and draft the next step.**
+- **Run what you can; hand over only what needs local data.** Anything
+  that works from committed files — tests, `13`–`17` and `19` over the
+  tables in `results/tables/`, linting, the worksheet linter — you run
+  yourself, verify, and commit the outputs. Runs that need the Chroma
+  index, the embedding cache, `data/raw/` or `data/interim/` (`03`, `04`,
+  `05`, `10`, `11`, `12`, `18`, and `17`'s IDF) cannot run in a cloud
+  container; hand those to the owner, saying what the command does and
+  why before giving it. The §14 hard stops apply either way.
+- **Commands for the owner: PowerShell only.** Never bash syntax, never
+  `&&` chaining, never forward-slash paths. Quote the repo path — it
+  contains a space.
+- **Code handed over in chat: whole files, not patches.** The owner's
+  words: *"why not give me the entire code for this .py to avoid
+  confusion."* Targeted edits pasted by hand have twice caused the wrong
+  version to be saved. Edits you make directly in the repo and commit are
+  not affected by this.
+- **When the owner pastes terminal output from a local run, interpret it
+  and draft the next step.**
 - **Verify what landed.** Files delivered have silently failed to reach
   `scripts/` more than once. When a command errors with "unrecognized
   arguments", suspect a stale file before suspecting the logic, and give a
