@@ -472,6 +472,12 @@ untested), Phase 8 (analysis and write-up), Phase 9 (fresh-clone
 reproducibility, `v1.0` tag). **Project 2** (text-to-SQL) begins the week
 after the tag, not before.
 
+**Phase 7 blocker:** RAGPipeline and 05_ask.py ignore retrieval.mode and
+are dense-only. Phase 7 must not run until generation uses the chosen
+retriever — measuring abstention on the arm that lost sweep 2 would
+describe a pipeline nobody selected, and retrieved context is exactly what
+abstention behaviour depends on.
+
 **Unresolved:** whether the cu128 CUDA wheel was ever installed. If it was,
 `docs/dependencies.md` and `requirements.lock.txt` are stale, and the
 embedding cache — keyed only on `hash(model, text)` — may hold a mix of CPU-
