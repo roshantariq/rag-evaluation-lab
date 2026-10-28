@@ -672,6 +672,11 @@ All of these are things a capable agent will do helpfully and should not.
   written; that has already happened once and is in the log as such.
 - **Install or upgrade a dependency** beyond what `requirements.lock.txt`
   pins.
+- **Never run 01_fetch_corpus.py or 02_extract_text.py.** data/interim/ is
+  frozen and gold evidence is anchored to its exact byte offsets.
+  Regenerating it silently invalidates all 101 spans. In a cloud session
+  with no data/, the correct response to a missing index is to say so and
+  stop, not to rebuild it.
 
 ## 15. Known gaps in this file
 
