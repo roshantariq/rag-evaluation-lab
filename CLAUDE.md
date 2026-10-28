@@ -100,9 +100,10 @@ data/
   raw/             PDFs                      [gitignored]
   interim/         extracted text            [gitignored, FROZEN]
   eval/            manifest + gold set       [COMMITTED — the deliverable]
-docs/              build-log.md, dependencies.md, paraphrase-protocol.md
+docs/              build-log.md, dependancies.md (sic), extraction.md,
+                   paraphrase-protocol.md [NOT YET COMMITTED]
 results/tables/    ablation CSVs             [committed]
-results/figures/   charts                    [committed]
+results/figures/   charts                    [created in Phase 8]
 scripts/           numbered pipeline entry points
 src/rageval/
   ingest/          arxiv_fetch.py, extract.py
@@ -114,18 +115,20 @@ src/rageval/
   evaluation/      gold.py, retrieval_metrics.py
   config.py        CHROMA_DIR, CONFIG_DIR, EMBED_CACHE, EVAL_DIR, INTERIM_DIR, TABLES_DIR
   pipeline.py      RAGPipeline, parse_citations, detect_abstention
-tests/             test_retrieval_metrics.py (34), test_bm25.py (36)
+tests/             test_bm25.py, test_chunking.py, test_extract.py, test_gold.py,
+                   test_pipeline.py, test_retrieval_metrics.py
+                   (155 tests, all passing, 28 Oct 2026)
 ```
 
 Scripts in use (run `dir scripts` for the full list):
 
 | script | purpose |
 |---|---|
-| `01_fetch_corpus.py` | arXiv search + PDF download, writes the corpus manifest (`--dry-run` first) |
-| `02_extract_text.py` | extract text to `data/interim/` and write the extraction audit |
+| `01_fetch_corpus.py` | arXiv search and PDF download |
+| `02_extract_text.py` | PDF → `data/interim/` (FROZEN output) |
 | `03_build_index.py` | chunk + embed + load a Chroma collection |
 | `04_search.py` | ad-hoc query against the index |
-| `05_ask.py` | end-to-end question: retrieve, generate, show citations (needs `OPENAI_API_KEY` unless cached) |
+| `05_ask.py` | end-to-end question → cited answer |
 | `06_find_evidence.py` | quoted phrase → exact character span |
 | `07_check_absence.py` | corpus-wide co-occurrence check for unanswerable candidates |
 | `08_validate_gold.py` | span and quote mechanical validation |
@@ -140,9 +143,9 @@ Scripts in use (run `dir scripts` for the full list):
 | `17_lexical_overlap.py` | the authoring-confound diagnostic |
 | `18_paraphrase_worksheet.py` | emit / validate the paraphrase worksheet |
 | `19_paraphrase_result.py` | **not yet written** — criterion fixed in `docs/paraphrase-protocol.md` |
-| `diagnose_chunks.py` | one-off: chunk-level prose ratio, how much of the index is axis-label noise (Phase 2b) |
-| `diagnose_extraction.py` | one-off: what reference stripping removed, probing post-appendix survival (Phase 2) |
-| `verify_blob_strip.py` | one-off: re-extract all 130 PDFs, log every base64 removal (Phase 2b) |
+
+Three unnumbered diagnostics also exist: `diagnose_chunks.py`,
+`diagnose_extraction.py`, `verify_blob_strip.py`.
 
 ---
 
@@ -640,6 +643,13 @@ done, and the next session inherits whatever you leave behind.
 - **Plan changes** — recorded in the build log's `## Plan amendments`
   section, never silently. Dropping a planned experiment because the
   pipeline moved is a result, not an omission, and gets written up as one.
+- **Claims in this file about the repo must be verified against the repo,
+  not trusted.** CLAUDE.md was written from a chat session and drifted
+  within days: it referenced three files that had never been committed and
+  one with a misspelled name. When you read a path here, check it exists
+  before acting on it, and correct this file when it does not. The project's
+  own standing lesson applies to its documentation: a plausible claim is the
+  one that does not get audited.
 
 **If CLAUDE.md and `docs/build-log.md` disagree, the build log wins.** It is
 the primary record; CLAUDE.md is a summary of it. Fix the summary.
