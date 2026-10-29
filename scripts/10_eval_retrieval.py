@@ -31,6 +31,7 @@ import argparse
 import json
 import logging
 import sys
+from pathlib import Path
 from collections import defaultdict
 
 import pandas as pd
@@ -184,7 +185,7 @@ def main() -> int:
         print(f"Unknown retrieval mode {mode!r}; expected one of {MODES}.")
         return 1
 
-    gold_path = args.gold or (EVAL_DIR / "gold_questions.jsonl")
+    gold_path = Path(args.gold) if args.gold else (EVAL_DIR / "gold_questions.jsonl")
     questions = load_gold(gold_path)
     scorable = [q for q in questions if is_scorable(q)]
     print(f"Gold set: {len(questions)} questions, {len(scorable)} with evidence "
