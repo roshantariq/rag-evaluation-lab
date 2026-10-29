@@ -1408,6 +1408,60 @@ path for two sweeps. It failed before scoring anything; fixed in `0f0cb35`
 and the run repeated. Every CLI option that the protocol depends on should
 be exercised at least once before the run it governs.
 
+### Literature check, after the paraphrase test and before sweep 3
+
+A targeted check of three things against published work, done before the
+reranking protocol was written so it could change the design.
+
+**1. The paraphrase finding is a known mechanism, newly measured.** The
+mechanism was named in open-domain QA five years before this project:
+
+- Lee, Chang & Toutanova (ACL 2019, ORQA): "in datasets where the question
+  askers already know the answer, i.e. SQuAD and TriviaQA, the retrieval
+  problem resembles traditional IR", where a dense vector "cannot match
+  BM25's ability to precisely represent every word in the evidence".
+- Karpukhin et al. (EMNLP 2020, DPR, §5.1): "We conjecture that the lower
+  performance on SQuAD is due to two reasons. First, the annotators wrote
+  questions after seeing the passage. As a result, there is a high lexical
+  overlap between passages and questions, which gives BM25 a clear
+  advantage."
+- Thakur et al. (NeurIPS 2021, BEIR) report a strong lexical bias in
+  several of its datasets, attributed to lexical systems being used during
+  annotation; a later zero-shot study finds BM25 does better on target
+  sets with larger query-document overlap.
+
+What those works did not do is isolate it: the DPR explanation is
+explicitly a conjecture, and the evidence everywhere is between datasets.
+This project's test holds the question, evidence and type fixed and
+changes only the wording, with a criterion fixed in advance. **The honest
+framing for the write-up is "a within-question, pre-registered measurement
+of a documented but conjectured authoring bias, in a specialist domain,
+large enough to erase the retriever comparison" — not a discovery.**
+
+**2. Reranking design.** A study of SciBERT reranking on TREC-COVID found
+shallow depths (≤ 20) limited by first-stage ranking and the best results
+at depths 50–100, dropping beyond. MS MARCO-trained MiniLM cross-encoders
+are the common default, including for reranking BM25's top 100 in
+biomedical retrieval. No source was found on whether cross-encoders lean
+on lexical overlap in the way BM25 does, so the paraphrased set is the only
+available check, and the protocol uses it.
+
+**3. Statistical practice.** Smucker, Allan & Carterette (CIKM 2007) found
+little practical difference between randomization, bootstrap and t-tests
+for IR comparisons, and that the sign and Wilcoxon tests performed poorly.
+**McNemar's exact test is a sign test on discordant spans**, and it treats
+spans as independent although they cluster within questions. No decision
+in this project rested on it — the switching rule reads the cluster
+bootstrap CI and the half-split win rate — but the McNemar p-values quoted
+above are probably anti-conservative. Recorded rather than re-analysed;
+from sweep 3 on, a paired randomization test over questions is reported
+beside it.
+
+Sources: arXiv 1906.00300 (ORQA), arXiv 2004.04906 (DPR), arXiv 2104.08663
+(BEIR), arXiv 2204.12755 (zero-shot dense retrieval), arXiv 2011.01580
+(TREC-COVID reranking depth), arXiv 2310.20588 (MiniLM reranking of BM25
+top 100), DOI 10.1145/1321440.1321528 (Smucker et al.).
+
 ### Standing lesson — paraphrase test
 
 The tercile split described the confound and could not settle it; its
