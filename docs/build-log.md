@@ -1309,6 +1309,28 @@ BM25's exact score and made the whole ranking legible as noise.
 When a knob is turned after seeing that its default failed, the useful
 experiment is not which setting wins. It is whether a method with no knob
 does just as well.
+
+### Paraphrase test — inputs frozen before any run
+
+Protocol: `docs/paraphrase-protocol.md`, committed before rewriting began.
+All 20 rewrites were written by the project author. `--build` passes every
+block with zero declared exceptions, and the manipulation check succeeds:
+mean IDF-weighted overlap fell from 0.661 to 0.220, a drop of **0.440**
+against the pre-registered 0.25. `gold_paraphrased.jsonl` differs from the
+gold set only in the 20 rewritten question texts.
+
+**Review, and what it had seen.** Claude Code checked the rewrites
+mechanically and against the three failure modes the script cannot see.
+That review was **not blind**: the reviewer had read this build log, so knew
+how some questions score (m010 among them). It raised five issues, all
+judged from question text alone, and the author fixed each before freezing:
+a stray `>` in m001; a004 resolved its own ambiguity by naming one system;
+m010 described Pangu-Weather by its architecture, doing the first hop for
+the retriever; m015 and m009 named ConvLSTM ("convolutional LSTM"), which
+the originals withhold.
+
+Worksheet, paraphrased gold and `paraphrase_overlap.csv` are committed
+together, before `para_dense` or `para_bm25` was run.
 ---
 
 ## Plan amendments
