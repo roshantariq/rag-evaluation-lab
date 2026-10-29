@@ -9,8 +9,9 @@ are null results; BM25 replaces dense retrieval as the baseline, with its
 effect size bounded by a measured authoring confound. The embedding-model
 sweep is dropped under its pre-registered condition. The paraphrase
 validity test supports the confound explanation: on rewritten
-high-overlap questions BM25's advantage vanishes. Next: reranking and a k
-sweep.
+high-overlap questions BM25's advantage vanishes. Sweep 3 (cross-encoder
+reranking) is null: +0.079 with a CI touching zero, BM25 stays the
+baseline, reranking carried forward as exploratory. Next: a k sweep.
 
 ---
 
@@ -1469,6 +1470,145 @@ interaction interval included zero. Holding the question fixed and changing
 only its wording settled it with the same number of questions. The design
 did the work, not the sample size — the same lesson as the oracle test in
 Phase 5: run the test whose two outcomes point in opposite directions.
+
+### Sweep 3 — cross-encoder reranking: NULL (not separable)
+
+**Built.** `src/rageval/retrieve/rerank.py` (`Reranker`) and a rerank stage
+in `10_eval_retrieval.py` (`--rerank`, `--rerank-depth`,
+`--rerank-max-length`, plus `--limit` for smoke runs that write
+`smoke_<tag>.csv` and never a `retrieval_` table). The harness refuses
+`--rerank` without an explicit max length, refuses a depth below `--k-max`,
+and stops if the model reports a different max length than was requested.
+`20_rerank_result.py` applies the protocol's decision tables; it and its
+tests were written before any reranked run existed. One scoring path still
+holds: the rerank arm goes through the same harness and scorer as every
+other arm.
+
+**Run** per `docs/reranking-protocol.md` (committed `c226d68`, before any
+run): BM25's top 100 rescored by `BAAI/bge-reranker-v2-m3` at
+`max_length` 1024, scored to `--k-max 50`, on the original and the
+paraphrased gold sets. After the harness change, plain BM25 reproduced the
+committed `retrieval_bm25.csv` cell for cell.
+
+**Primary result** — `rerank` vs `bm25`, 58 questions, 101 spans:
+
+| metric | bm25 | rerank | delta | 95% CI | Holm p (3 pairs) | randomization p | win rate |
+|---|---|---|---|---|---|---|---|
+| **budget 20k (decides)** | 0.584 | 0.663 | **+0.079** | **[0.000, +0.158]** | 0.0963 | 0.0913 | **97.4%** |
+| k=10 | 0.604 | 0.673 | +0.069 | [−0.010, +0.151] | 0.1671 | — | — |
+| k=20 | 0.663 | 0.713 | +0.050 | [−0.019, +0.120] | 0.2668 | — | — |
+
+Discordant spans at the budget: 13 found by rerank only, 5 by BM25 only.
+Half-split optimism +0.004, and 107 of 4,000 splits were exact ties.
+
+**Decision: null, not separable. BM25 stays the baseline.** The win rate
+clears the 90% threshold easily, but the CI does not exclude zero. Its
+lower bound is **exactly 0.000**, not a rounded small positive, and the
+protocol's rule ("excludes zero") treats touching zero as including it.
+`20_rerank_result.py` was tested on that exact case (`ci_lo = 0.0`) before
+any run. Span recall moves in steps of 1/101, so the bootstrap percentiles
+land on lattice values and a bound of exactly zero is less of a
+coincidence than it looks. That explains the boundary; it does not move it.
+This is the second pre-registered boundary in a row that was hit exactly:
+the paraphrase test's dense guard was the first. Both were honoured as
+written.
+
+Against the dense baseline, reranked BM25 is +0.248 [+0.139, +0.360]
+(Holm p = 0.0001). At k=10 it closes about 50% of the dense baseline's
+measured headroom (+0.238 of 0.475), against BM25's 35.4%.
+
+**Secondary — the 20 rewritten questions, 40 spans, budget 20k:**
+
+| | gain = rerank − bm25 | 95% CI |
+|---|---|---|
+| original phrasing | +0.050 | [−0.071, +0.171] |
+| rewritten phrasing | +0.100 | [−0.056, +0.262] |
+| original − rewritten | −0.050 | [−0.211, +0.128] |
+
+**Inconclusive**, as the protocol allowed in advance. The direction leans
+the encouraging way: the gain is no smaller once the shared vocabulary is
+removed, which is what a reranker scoring meaning rather than term overlap
+would show. At 40 spans that is a direction, not a finding. The 38
+untouched questions scored identically in `rerank` and `para_rerank`, so
+the reranked runs differ only in wording.
+
+**Reported regardless:**
+
+- **Latency.** Median per question: BM25 0.015 s; reranking 3.87 s more,
+  on an RTX 5070 Ti Laptop GPU. About 250× slower, for +0.079 that is not
+  separable.
+- **Candidate ceiling.** 88.1% of spans fall within BM25's top 100 on the
+  original wording, and 77.2% on the rewritten set. The reranker can only
+  reorder; nothing outside depth 100 is reachable.
+- **Where the gain comes from: completing two-span questions.** Both spans
+  in the top 10: 19 of 33 two-span questions under rerank, against 11 under
+  BM25. For multi-hop alone it is 13 of 18 against 7. Complete misses barely
+  move: 8 → 7 at k=20, and 9 → 10 at the budget. The reranker finds the
+  second passage of questions BM25 already half-answers; it does not reach
+  questions BM25 misses entirely.
+- **Changes at k=20, read by hand.** Newly recovered: f010, f013, f017, and
+  c002 (span 0). Second span added: c013, m005, m013, m014, m017. Lost:
+  a006 (span 1), c006 (span 1), c008 (span 0), m018 (span 1). At the
+  budget, f016, c012, c006, c008 and a006 lose spans. c006 and c008 are
+  two of the comparative questions that were once authored against the
+  wrong paper (bug museum); they were re-anchored and validate, so the loss
+  is recorded as is, but it is worth one more manual look before Phase 8.
+
+**Predictions:**
+
+| prediction | outcome |
+|---|---|
+| 1. Gain positive but small, probably not separable | **Confirmed**, at the boundary |
+| 2. f013 and c002 stay missed | **Wrong.** f013 is recovered at k=20 and at the budget; c002's span 0 is recovered at k=20 but not within the budget |
+| 3. Secondary inconclusive | **Confirmed** |
+
+Prediction 2 reasoned that if BM25 never ranks the evidence near the top,
+reranking cannot help. The premise was wrong: BM25 *did* rank both
+questions' evidence inside its top 100 (`candidate_spans` 0 and 0;1),
+just not inside its top 20. The two questions that every configuration
+missed were ordering failures, not recall failures. That is the most
+interesting single result of the sweep.
+
+**A Holm p that moved.** In this run's three-pair family, dense vs BM25
+prints Holm p = 0.0046; sweep 2 reported 0.0069 for the same comparison.
+Holm's adjustment depends on which pairs are tested together, and the
+family changed. The sweep 2 figure stands for sweep 2; neither decided
+anything, since the switching rule reads the CI and win rate.
+
+**Decided.**
+
+- BM25 stays the baseline. Sweep 4 (value of k) runs on BM25 alone.
+- Reranking is carried into the end-of-phase replication **as an
+  exploratory arm** (owner's decision, 30 October 2026). It cannot replace
+  the baseline from there; it is reported beside it so the write-up can
+  say whether the +0.079 direction holds under the other chunk size.
+
+**What went wrong.**
+
+- **The outcome label `null` read back as NaN.** pandas parses the CSV
+  string `null` as missing, so `test_secondary_cannot_change_primary`
+  failed while the test suite was being written. The label is now
+  `not_separable`. Caught before any run, but it is the dtype-inference bug
+  class again: a value in a CSV that pandas silently reinterprets.
+- `CrossEncoder.max_length` raised a deprecation warning in
+  sentence-transformers 6.0.0; the read-back uses `max_seq_length`
+  (`4a7b505`). No number was affected.
+
+**Tables:** `retrieval_rerank.csv`, `retrieval_para_rerank.csv`,
+`paired_baseline_bm25_rerank_{B20000,k10,k20}.csv`,
+`stability_bm25_rerank_B20000.csv`, `rerank_result.csv`,
+`rerank_result_questions.csv`.
+
+### Standing lesson — sweep 3
+
+**A question every configuration misses is not necessarily a recall
+failure.** f013 and c002 were treated as unreachable for three sweeps
+because no ranked list showed them in its top 20. Their evidence was in
+BM25's top 100 the whole time. A miss at k=20 says where the evidence
+ranked, not whether the system could find it; the candidate ceiling is the
+number that distinguishes the two, and it should be reported for any
+question called "unreachable".
+
 ---
 
 ## Plan amendments
