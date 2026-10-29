@@ -7,8 +7,10 @@ follows the build plan. Newest phase last.
 size), 2 (retrieval function) and 2b (fusion) closed. Chunk size and fusion
 are null results; BM25 replaces dense retrieval as the baseline, with its
 effect size bounded by a measured authoring confound. The embedding-model
-sweep is dropped under its pre-registered condition. Next: reranking, a k
-sweep, and a paraphrase validity test on the confound.
+sweep is dropped under its pre-registered condition. The paraphrase
+validity test supports the confound explanation: on rewritten
+high-overlap questions BM25's advantage vanishes. Next: reranking and a k
+sweep.
 
 ---
 
@@ -1331,6 +1333,88 @@ the originals withhold.
 
 Worksheet, paraphrased gold and `paraphrase_overlap.csv` are committed
 together, before `para_dense` or `para_bm25` was run.
+
+### Paraphrase test — result: confound explanation SUPPORTED
+
+Two harness runs on `gold_paraphrased.jsonl` — `para_dense`
+(`dense_phase5.yaml`) and `para_bm25` (`sweep_bm25.yaml`), both `--k-max 50`
+— scored by `19_paraphrase_result.py`, which was written and tested before
+either run existed. On the 20 rewritten questions, 40 spans:
+
+| | dense | bm25 | bm25 − dense | 95% CI |
+|---|---|---|---|---|
+| original, budget 20k | 0.375 | 0.575 | +0.200 | [+0.073, +0.333] |
+| rewritten, budget 20k | 0.275 | 0.200 | −0.075 | [−0.195, +0.053] |
+| original, k=20 | 0.500 | 0.675 | +0.175 | [+0.023, +0.342] |
+| rewritten, k=20 | 0.350 | 0.275 | −0.075 | [−0.216, +0.059] |
+
+| metric | effect = Δ_original − Δ_paraphrase | 95% CI | outcome |
+|---|---|---|---|
+| budget 20k | +0.275 | [+0.081, +0.462] | supported |
+| k=20 | +0.250 | [+0.095, +0.415] | supported |
+
+Cluster bootstrap over questions, 10,000 resamples, seed 20260827. Both
+metrics agree, so the protocol's silence on which one decides did not
+matter. The 38 untouched questions scored identically in the original and
+paraphrased runs under both retrievers, so the runs differ only in wording.
+
+**Reading, as the protocol declared it.** BM25's advantage over dense
+disappears when the question stops sharing vocabulary with its evidence.
+BM25 fell from 0.575 to 0.200; dense fell from 0.375 to 0.275. On these
+questions the sign reverses, though −0.075 is not separable from zero. The
+aggregate +0.168 is inflated by authoring, and Δ_paraphrase is the honest
+effect size for high-overlap questions: **no detectable BM25 advantage**.
+
+Three qualifications, recorded with the result rather than after it:
+
+1. **The broken-question guard sat exactly on its boundary at k=20.** Dense
+   recall fell by 0.150 against a rule that fires on *more than* 0.15, so
+   it did not fire; at the 20k budget the fall was 0.100. The comparison in
+   `19` carries a 1e-9 tolerance so that 0.15 computed as
+   0.15000000000000002 does not count as "more than" — set and tested on
+   synthetic data before any run, and far below one span (1/40). It is
+   still the reason no warning printed, so the guard is reported as **not
+   triggered, at the boundary**. The rewrites made the questions harder for
+   both retrievers, not only for the lexical one.
+2. **Dense fell too.** The paired difference absorbs a general loss of
+   question quality, and the guard is the protocol's check on it. Read the
+   result as "BM25's lead on these questions is mostly shared vocabulary",
+   not as a clean decomposition.
+3. **n = 20, chosen for high overlap**, 9 of them multi-hop, rewritten by
+   one author who knew the hypothesis. Δ_paraphrase describes these
+   questions, not the gold set.
+
+**What changes.** BM25 stays the baseline: the switching rule was about
+which retriever does better on this gold set, and it still does. What
+changes is the claim. The sweep 2 sentence that "survived every instrument"
+is superseded below; it was written before this test and said the low
+tercile variation was "unresolved". This test, within question rather than
+between groups, resolves it in the direction the tercile split pointed.
+
+> BM25 outperforms the dense baseline by +0.168 span recall
+> [+0.082, +0.253] on this gold set, Holm p = 0.0069. That advantage is
+> largely an artifact of authoring: when the 20 highest-overlap questions
+> are rewritten to remove shared vocabulary, BM25's lead on them falls by
+> +0.275 [+0.081, +0.462] and becomes −0.075 [−0.195, +0.053] — no
+> detectable advantage. Dense recall fell on the same rewrites by 0.10 to
+> 0.15, at the edge of the pre-registered broken-question guard.
+
+### Defect found
+
+**`--gold` crashed the harness.** `10_eval_retrieval.py` passed the option's
+string straight to `load_gold`, which calls `path.exists()`. The option had
+never been used before the paraphrase runs, so the defect sat in an untested
+path for two sweeps. It failed before scoring anything; fixed in `0f0cb35`
+and the run repeated. Every CLI option that the protocol depends on should
+be exercised at least once before the run it governs.
+
+### Standing lesson — paraphrase test
+
+The tercile split described the confound and could not settle it; its
+interaction interval included zero. Holding the question fixed and changing
+only its wording settled it with the same number of questions. The design
+did the work, not the sample size — the same lesson as the oracle test in
+Phase 5: run the test whose two outcomes point in opposite directions.
 ---
 
 ## Plan amendments
