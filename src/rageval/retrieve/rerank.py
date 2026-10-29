@@ -41,7 +41,7 @@ class Reranker:
             # Read back what the model will actually use: a silent cap below
             # the requested length would reintroduce the truncation the
             # protocol measured and ruled out.
-            self.max_length = model.max_length
+            self.max_length = getattr(model, "max_seq_length", None) or model.max_length
 
             def score_fn(pairs):
                 return model.predict(pairs, batch_size=batch_size,
