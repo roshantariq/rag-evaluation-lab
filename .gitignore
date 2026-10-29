@@ -18,3 +18,5 @@ ev.txt
 a.json
 b.json
 c.json
+# Local operating manual for Claude Code sessions; not published
+CLAUDE.md
