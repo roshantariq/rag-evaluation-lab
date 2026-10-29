@@ -23,6 +23,12 @@ The bm25 arm exists because a hybrid result is uninterpretable without it.
 If hybrid beats dense but bm25 alone beats both, the dense half is dead
 weight; if bm25 alone is near zero and hybrid still improves, the fusion is
 doing real work.
+
+`--rerank <model>` adds a cross-encoder stage after any mode: the first
+stage fetches `--rerank-depth` candidates, the cross-encoder reorders them,
+and the top `--k-max` are scored by the same path as every other arm. The
+first stage's span recall within that depth is printed as the reranker's
+ceiling, and per-question timings are written for the latency report.
 """
 
 from __future__ import annotations
@@ -31,6 +37,7 @@ import argparse
 import json
 import logging
 import sys
+import time
 from pathlib import Path
 from collections import defaultdict
 
@@ -67,6 +74,7 @@ from rageval.retrieve.fusion import (
     provenance,
     reciprocal_rank_fusion,
 )
+from rageval.retrieve.rerank import Reranker
 from rageval.store.chroma_store import ChromaStore
 
 MODES = ("dense", "bm25", "hybrid")
@@ -169,7 +177,28 @@ def main() -> int:
                         help="Which retriever gets position 1 when "
                              "interleaving. Affects exactly one rank; stated "
                              "here rather than buried in the fusion code.")
+    parser.add_argument("--rerank", default=None, metavar="MODEL",
+                        help="Cross-encoder to rerank the first stage with.")
+    parser.add_argument("--rerank-depth", type=int, default=100,
+                        help="First-stage candidates the reranker rescores.")
+    parser.add_argument("--rerank-max-length", type=int, default=None,
+                        help="Cross-encoder input length. Required with "
+                             "--rerank: truncation must be a declared choice.")
+    parser.add_argument("--limit", type=int, default=None,
+                        help="Score only the first N scorable questions. For "
+                             "exercising options before a real run; the "
+                             "output is not a result.")
     args = parser.parse_args()
+
+    if args.rerank:
+        if args.rerank_max_length is None:
+            print("--rerank needs --rerank-max-length. The protocol fixes it; "
+                  "a library default would truncate silently.")
+            return 1
+        if args.rerank_depth < args.k_max:
+            print(f"--rerank-depth {args.rerank_depth} is below --k-max "
+                  f"{args.k_max}: the scored list would be shorter than declared.")
+            return 1
 
     logging.basicConfig(level=logging.INFO, format="%(message)s", stream=sys.stdout)
     for noisy in ("httpx", "huggingface_hub", "sentence_transformers", "urllib3",
@@ -190,6 +219,10 @@ def main() -> int:
     scorable = [q for q in questions if is_scorable(q)]
     print(f"Gold set: {len(questions)} questions, {len(scorable)} with evidence "
           f"({len(questions) - len(scorable)} unanswerable, excluded)\n")
+    if args.limit:
+        questions = scorable = scorable[:args.limit]
+        print(f"  --limit {args.limit}: SMOKE RUN on {len(scorable)} question(s). "
+              f"Not a result; written to smoke_{args.tag}.csv\n")
 
     store = ChromaStore(CHROMA_DIR, cfg["index"]["collection"])
     if store.count() == 0:
@@ -207,6 +240,15 @@ def main() -> int:
         else:
             print(f"  fusion       : interleave, {args.interleave_first} first, "
                   f"pool={args.pool} per retriever")
+    reranker = None
+    if args.rerank:
+        reranker = Reranker(args.rerank, max_length=args.rerank_max_length)
+        print(f"  rerank       : {args.rerank}, depth {args.rerank_depth}, "
+              f"max_length {reranker.max_length}")
+        if reranker.max_length != args.rerank_max_length:
+            print(f"  ERROR: model reports max_length {reranker.max_length}, "
+                  f"not the {args.rerank_max_length} requested.")
+            return 1
     print(f"  depth        : k_max={args.k_max}\n")
 
     # --- relevant-chunk counts, for an honest IDCG -------------------------
@@ -248,21 +290,23 @@ def main() -> int:
     prov_total: dict[str, int] = defaultdict(int)
     PROV_K = 10
 
+    first_k = args.rerank_depth if reranker else args.k_max
+
     def get_hits(question: str) -> list:
         if mode == "dense":
-            return store.query(encoder.encode_query(question), k=args.k_max)
+            return store.query(encoder.encode_query(question), k=first_k)
         if mode == "bm25":
-            return bm25.query(question, k=args.k_max)
+            return bm25.query(question, k=first_k)
 
         dense_hits = store.query(encoder.encode_query(question), k=args.pool)
         sparse_hits = bm25.query(question, k=args.pool)
         if args.fusion == "rrf":
             fused = reciprocal_rank_fusion([dense_hits, sparse_hits],
-                                           k=args.rrf_k, top_k=args.k_max)
+                                           k=args.rrf_k, top_k=first_k)
         else:
             order = ([sparse_hits, dense_hits] if args.interleave_first == "bm25"
                      else [dense_hits, sparse_hits])
-            fused = interleave(order, top_k=args.k_max)
+            fused = interleave(order, top_k=first_k)
         for key, n in provenance(fused[:PROV_K],
                                  {"dense": dense_hits, "bm25": sparse_hits}).items():
             prov_total[key] += n
@@ -270,11 +314,26 @@ def main() -> int:
 
     rows = []
     drift = 0
+    cand_found = cand_total = 0
     for i, q in enumerate(questions, 1):
         if not is_scorable(q):
             rows.append(evaluate_question(q, []))
             continue
+        t0 = time.perf_counter()
         hits = get_hits(q.question)
+        t1 = time.perf_counter()
+        timing = {}
+        if reranker:
+            spans = spans_from_question(q)
+            found = {i for i, s in enumerate(spans)
+                     if any(h.arxiv_id == s.arxiv_id and h.overlaps(s.char_start, s.char_end)
+                            for h in hits)}
+            cand_found += len(found)
+            cand_total += len(spans)
+            hits = reranker.rerank(q.question, hits, top_k=args.k_max)
+            timing = {"first_stage_s": t1 - t0,
+                      "rerank_s": time.perf_counter() - t1,
+                      "candidate_spans": ";".join(str(i) for i in sorted(found))}
         retrieved = [Retrieved(h.arxiv_id, h.char_start, h.char_end, h.score) for h in hits]
         if known_spans:
             for h in retrieved:
@@ -282,7 +341,8 @@ def main() -> int:
                 if h.arxiv_id in {s.arxiv_id for s in spans_from_question(q)} \
                         and key not in known_spans:
                     drift += 1
-        rows.append(evaluate_question(q, retrieved, n_relevant_total=n_relevant.get(q.id)))
+        rows.append(evaluate_question(q, retrieved, n_relevant_total=n_relevant.get(q.id))
+                    | timing)
         if i % 10 == 0:
             print(f"  scored {i}/{len(questions)}")
 
@@ -292,7 +352,11 @@ def main() -> int:
               f"nDCG denominators are unreliable.\n")
 
     df = pd.DataFrame(rows)
-    out_path = args.out or (TABLES_DIR / f"retrieval_{args.tag}.csv")
+    if args.limit:
+        # Never under a retrieval_ name: 13, 15, 16 and 19 would read it.
+        out_path = TABLES_DIR / f"smoke_{args.tag}.csv"
+    else:
+        out_path = args.out or (TABLES_DIR / f"retrieval_{args.tag}.csv")
     df.to_csv(out_path, index=False)
 
     # --- report ------------------------------------------------------------
@@ -340,6 +404,21 @@ def main() -> int:
         print("  RRF at k=60 with a deep pool drives this to exactly zero: see")
         print("  the arithmetic in rageval/retrieve/fusion.py.")
 
+    # --- what the reranker could reach, and what it cost --------------------
+    if reranker and cand_total:
+        scored = [r for r in rows if "rerank_s" in r]
+        fs = sorted(r["first_stage_s"] for r in scored)
+        rr = sorted(r["rerank_s"] for r in scored)
+        print(f"\n{'-' * 74}\nRERANKING\n{'-' * 74}")
+        print(f"  candidate ceiling   span recall within the first stage's top "
+              f"{args.rerank_depth}: {cand_found}/{cand_total} = "
+              f"{cand_found / cand_total:.3f}")
+        print("  The reranker can only reorder these; nothing outside them is reachable.")
+        print(f"  latency per question (median / max)")
+        print(f"    first stage       {fs[len(fs) // 2]:.3f}s / {fs[-1]:.3f}s")
+        print(f"    rerank            {rr[len(rr) // 2]:.3f}s / {rr[-1]:.3f}s")
+        print("  The first question's rerank time includes model warm-up.")
+
     # --- which half of the chain was found ---------------------------------
     for qtype in ("multi_hop", "comparative"):
         if not any(r.get("question_type") == qtype and r.get("n_evidence") == 2
@@ -378,7 +457,9 @@ def main() -> int:
         # it cannot be quietly forgotten once the aggregate looks good.
         predicted = {"f013", "f015", "m010", "c002"}
         still = predicted & {r["id"] for r in misses}
-        if mode != "dense":
+        # Only meaningful for the plain lexical arms on the original wording;
+        # it printed a misleading line on the paraphrased runs.
+        if mode != "dense" and not reranker and not args.gold:
             print(f"\n  PRE-REGISTERED (sweep 2): lexical retrieval should recover")
             print(f"  f013, f015, m010, c002. Still missing: "
                   f"{', '.join(sorted(still)) if still else 'none'}"
