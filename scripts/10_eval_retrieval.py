@@ -555,10 +555,12 @@ def main() -> int:
         # it cannot be quietly forgotten once the aggregate looks good.
         predicted = {"f013", "f015", "m010", "c002"}
         still = predicted & {r["id"] for r in misses}
-        # Only meaningful for the plain lexical arms on the original wording;
-        # it printed a misleading line on the paraphrased runs.
+        # Only meaningful for the plain lexical arms on the original wording
+        # and the collection sweep 2 used; it printed a misleading line on
+        # the paraphrased runs.
         if (mode != "dense" and not reranker and not args.gold
-                and args.min_prose_ratio is None and not args.chunks):
+                and args.min_prose_ratio is None and not args.chunks
+                and cfg["index"]["collection"] == "baseline_fixed512_minilm"):
             print(f"\n  PRE-REGISTERED (sweep 2): lexical retrieval should recover")
             print(f"  f013, f015, m010, c002. Still missing: "
                   f"{', '.join(sorted(still)) if still else 'none'}"
