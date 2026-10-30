@@ -96,6 +96,8 @@ def main() -> int:
                     help="generation token budget for uncached calls in this invocation")
     ap.add_argument("--judge", action="store_true", help="also run RAGAS faithfulness")
     ap.add_argument("--judge-budget-tokens", type=int, default=None)
+    ap.add_argument("--judge-retest", action="store_true",
+                    help="dry run only: judge every judged answer once more (protocol amendment)")
     args = ap.parse_args()
 
     sys.stdout.reconfigure(encoding="utf-8")
@@ -109,6 +111,9 @@ def main() -> int:
         return 2
     if args.judge and args.judge_budget_tokens is None:
         print("--judge needs --judge-budget-tokens.")
+        return 2
+    if args.judge_retest and not (args.dry_run and args.judge):
+        print("--judge-retest runs on the dry run only, with --judge.")
         return 2
 
     with open(CONFIG_DIR / args.config, "r", encoding="utf-8") as fh:
@@ -256,6 +261,10 @@ def main() -> int:
                        faith_path, args.dry_run, problems)
         if rc:
             return rc
+    if args.judge_retest:
+        rc = run_retest(out, gold, texts, judge_model, args.judge_budget_tokens)
+        if rc:
+            return rc
 
     print(f"\nwrote {answers_path.relative_to(PROJECT_ROOT)}")
     if problems:
@@ -315,6 +324,60 @@ def run_judge(out, gold, texts, judge_model, budget, faith_path, dry_run, proble
         print(f"  projected: ~${spent / new:.4f} per judged answer; at most 174 answers, "
               f"~${174 * spent / new:.2f}, tokens {174 * meter.tokens_used / new:,.0f}")
     print(f"wrote {faith_path.relative_to(PROJECT_ROOT)}")
+    return 0
+
+
+def run_retest(out, gold, texts, judge_model, budget) -> int:
+    """Judge each judged dry-run answer once more and compare (amendment)."""
+    questions = {q.id: q for q in gold}
+    ckpt = fa.Checkpoint(JUDGE_CHECKPOINT)
+    meter = fa.UsageMeter(max_total_tokens=budget)
+    metric = fa.make_metric(judge_model, meter)
+    todo = out[(out["question_type"] != "unanswerable") & (~out["abstained"])]
+    print(f"\nJUDGE TEST-RETEST: {len(todo)} answers judged a second time, same text, "
+          f"same contexts, checkpoint bypassed")
+    rows = []
+    for _, r in todo.iterrows():
+        judged = fa.strip_confidence(r["answer"])
+        key = fa.answer_key(r["id"], r["strategy"], judged, judge_model)
+        first = ckpt.done[key]
+        contexts = [texts[c] for c in r["retrieved_chunk_ids"].split("|")]
+        try:
+            second = asyncio.run(fa.judge(metric, key, questions[r["id"]].question,
+                                          judged, contexts, meter))
+        except Exception as e:
+            print(f"  RETEST STOPPED at {r['id']} {r['strategy']}: {type(e).__name__}: {e}")
+            return 3
+        fa.validate(second)
+        same_split = first.statements == second.statements
+        agree = (sum(a == b for a, b in zip(first.verdicts, second.verdicts))
+                 if same_split else None)
+        d = (abs(first.score - second.score)
+             if first.score is not None and second.score is not None else None)
+        rows.append({"id": r["id"], "strategy": r["strategy"],
+                     "first": first.score, "second": second.score, "abs_diff": d,
+                     "n_first": first.n_statements, "n_second": second.n_statements,
+                     "same_statements": same_split,
+                     "verdicts_agree": agree if agree is not None else "",
+                     "judge_served_model": second.served_model})
+        print(f"  {r['id']} {r['strategy']:<19} {first.n_supported}/{first.n_statements} -> "
+              f"{second.n_supported}/{second.n_statements}  |d| "
+              f"{'-' if d is None else f'{d:.3f}'}"
+              f"{f'  same statements, {agree}/{first.n_statements} verdicts agree' if same_split else ''}")
+    df = pd.DataFrame(rows)
+    path = TABLES_DIR / "judge_retest_dryrun.csv"
+    path.unlink(missing_ok=True)
+    df.to_csv(path, index=False, encoding="utf-8")
+    diffs = df["abs_diff"].dropna()
+    same = df[df["same_statements"]]
+    n_v = int(same["n_first"].sum())
+    print(f"\n  mean |d| {diffs.mean():.3f}, max |d| {diffs.max():.3f} over {len(diffs)} answers; "
+          f"{int((diffs > 0).sum())} answers changed score")
+    print(f"  same statement split on {len(same)}/{len(df)} answers"
+          + (f"; on those, {int(same['verdicts_agree'].sum())}/{n_v} verdicts agree"
+             if n_v else ""))
+    spent = cost(judge_model, meter.prompt_tokens, meter.completion_tokens)
+    print(f"  tokens {meter.tokens_used:,}, ~${spent:.3f}; wrote {path.relative_to(PROJECT_ROOT)}")
     return 0
 
 
