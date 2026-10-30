@@ -28,10 +28,19 @@ CREATE TABLE IF NOT EXISTS responses (
 """
 
 
+class TokenBudgetExceeded(RuntimeError):
+    """Raised instead of making a call that could pass the run's token budget."""
+
+
 @dataclass
 class LLMResponse:
     text: str
     model: str
+    # The dated version that actually replied, from the API response. An
+    # alias such as "gpt-4o-mini" can be repointed between two halves of a
+    # resumed run; this is how that would show.
+    served_model: str = ""
+    finish_reason: str = ""
     prompt_tokens: int = 0
     completion_tokens: int = 0
     cached: bool = False
@@ -69,6 +78,8 @@ class ResponseCache:
         payload = json.dumps({
             "text": resp.text,
             "model": resp.model,
+            "served_model": resp.served_model,
+            "finish_reason": resp.finish_reason,
             "prompt_tokens": resp.prompt_tokens,
             "completion_tokens": resp.completion_tokens,
             "latency_s": resp.latency_s,
@@ -90,6 +101,7 @@ class LLMClient:
         temperature: float = 0.0,
         max_tokens: int = 700,
         cache_path: Path | None = None,
+        max_total_tokens: int | None = None,
     ):
         self.provider = provider
         self.model = model
@@ -97,6 +109,7 @@ class LLMClient:
         self.max_tokens = max_tokens
         self.cache = ResponseCache(cache_path) if cache_path else None
         self._client = None
+        self.max_total_tokens = max_total_tokens
         self.calls_made = 0
         self.tokens_used = 0
 
@@ -134,6 +147,7 @@ class LLMClient:
             if hit:
                 return hit
 
+        self._check_budget(system, user)
         t0 = time.perf_counter()
         raw = self.client.chat.completions.create(
             model=self.model,
@@ -147,6 +161,8 @@ class LLMClient:
         resp = LLMResponse(
             text=(raw.choices[0].message.content or "").strip(),
             model=self.model,
+            served_model=getattr(raw, "model", "") or "",
+            finish_reason=raw.choices[0].finish_reason or "",
             prompt_tokens=raw.usage.prompt_tokens if raw.usage else 0,
             completion_tokens=raw.usage.completion_tokens if raw.usage else 0,
             cached=False,
@@ -157,3 +173,21 @@ class LLMClient:
         if self.cache and key:
             self.cache.put(key, resp)
         return resp
+
+    def _check_budget(self, system: str, user: str) -> None:
+        """Refuse a call that could take the run past `max_total_tokens`.
+
+        Only uncached calls count, and the check runs before the request,
+        so the run stops cleanly below a hard provider cap instead of
+        failing mid-call. The next call's size is estimated high: one token
+        per three characters of prompt plus the full completion allowance.
+        """
+        if self.max_total_tokens is None:
+            return
+        estimate = (len(system) + len(user)) // 3 + self.max_tokens
+        if self.tokens_used + estimate > self.max_total_tokens:
+            raise TokenBudgetExceeded(
+                f"token budget {self.max_total_tokens:,} would be passed: "
+                f"{self.tokens_used:,} used in {self.calls_made} uncached calls, "
+                f"next call estimated at {estimate:,}. Completed answers are cached."
+            )

@@ -146,6 +146,32 @@ the build log with its reason before the full run. The owner reads the dry
 run's full output before the full run starts. Its 15 answers stay in the
 cache and are part of the full run.
 
+### Amendment, 30 October 2026, before any answer: pinned versions and resumable judging
+
+*Procedural, made before any Phase 7 answer existed. No criterion,
+threshold, prompt or question changes.*
+
+The owner's hard spend cap is $10, against an estimate of $5–10 for
+judging, so the run may stop at the cap and be resumed after it is raised.
+A resumed run must be the same experiment as an uninterrupted one. Each
+call is independent and each (question, strategy) is generated once
+either way, so splitting changes nothing, with one exception, now closed:
+
+1. **Pinned versions.** `gpt-4o-mini` and `gpt-4o` are aliases the
+   provider can repoint. Generator and judge are both named in config by
+   their **dated version**, confirmed against the provider's model list
+   before the dry run, so both halves of a split run query the same model.
+2. **The served version is recorded**, from each API response, on every
+   answer and every judgment, not the name requested. **Integrity check
+   5:** all 222 answers report one served version, and all judgments
+   report one. Otherwise that is reported before any number is read.
+3. **Judging resumes and fails loudly.** RAGAS calls do not pass through
+   the response cache, so each faithfulness score is written to disk as
+   soon as it exists and a resumed run skips scored answers. RAGAS turns a
+   failed call into NaN by default; here a failed call stops the run, and
+   a NaN is never written as a score. A cap reached halfway through would
+   otherwise look like a finished run with blank scores.
+
 ## Labelling
 
 Every answer to an unanswerable question (16 × 3 = 48) is labelled by hand.
