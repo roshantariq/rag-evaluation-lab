@@ -59,6 +59,7 @@ import pandas as pd
 from rageval.config import TABLES_DIR
 from rageval.evaluation import decision
 from rageval.evaluation.spans import count_spans
+from rageval.provenance import record
 
 # --- pre-registered in docs/reranking-protocol.md; do not change -----------
 WIN_THRESHOLD = 0.90
@@ -265,6 +266,7 @@ def main() -> int:
     }]).to_csv(out_path, index=False)
     pd.DataFrame({"id": rewritten, "n_evidence": ev,
                   **{f"{k}_hits": v for k, v in arms.items()}}).to_csv(q_path, index=False)
+    record([out_path, q_path])
     print(f"\n  -> {out_path}\n  -> {q_path}\n")
     return 0
 

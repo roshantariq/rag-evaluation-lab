@@ -34,6 +34,7 @@ import pandas as pd
 from rageval.chunking.base import chunk_document, get_token_counter, word_spans
 from rageval.chunking.strategies import semantic_cuts, sentence_segments
 from rageval.config import INTERIM_DIR, TABLES_DIR
+from rageval.provenance import record
 
 STRATEGIES = ("fixed", "section", "recursive", "semantic")
 
@@ -165,6 +166,7 @@ def build(args, docs, target, count_tokens, embedded, ref) -> int:
         return 0
     out = args.out or (TABLES_DIR / f"chunks_{args.strategy}.csv")
     df.drop(columns="chars").to_csv(out, index=False)
+    record([out])
     print(f"\n  -> {out}")
     return 0
 

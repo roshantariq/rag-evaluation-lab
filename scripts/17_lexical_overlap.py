@@ -56,6 +56,7 @@ from rageval.evaluation.retrieval_metrics import is_scorable
 from rageval.retrieve.bm25 import tokenize
 from rageval.store.chroma_store import ChromaStore
 from rageval.evaluation.spans import span_indices
+from rageval.provenance import record
 
 
 def build_idf(texts) -> tuple[dict[str, float], int]:
@@ -348,6 +349,7 @@ def main() -> int:
     # in place reading as this run's result.
     groups_path.unlink(missing_ok=True)
     pd.DataFrame(grows).to_csv(groups_path, index=False)
+    record([Path(out_path), groups_path], gold=[EVAL_DIR / "gold_questions.jsonl"])
 
     print(f"\n  per-question overlap -> {out_path}")
     print(f"  group statistics     -> {groups_path}\n")

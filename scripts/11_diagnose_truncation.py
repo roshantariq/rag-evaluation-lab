@@ -50,6 +50,7 @@ from rageval.evaluation.retrieval_metrics import (
     is_scorable,
     spans_from_question,
 )
+from rageval.provenance import record
 
 MAX_TOKENS = 256  # all-MiniLM-L6-v2; CLS and SEP come out of this budget.
 
@@ -173,6 +174,7 @@ def main() -> int:
     out = pd.DataFrame(rows)
     out_path = TABLES_DIR / f"truncation_diagnosis_k{args.k}.csv"
     out.to_csv(out_path, index=False)
+    record([out_path], gold=[EVAL_DIR / "gold_questions.jsonl"])
 
     def crosstab(flag: str, label: str):
         print(f"{'=' * 74}\n{label}  (n={len(out)} evidence spans, hits at k={args.k})\n{'=' * 74}")

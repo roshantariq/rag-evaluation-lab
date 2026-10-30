@@ -77,6 +77,7 @@ import pandas as pd
 
 from rageval.config import EVAL_DIR, TABLES_DIR
 from rageval.evaluation.spans import count_spans
+from rageval.provenance import record
 
 # --- pre-registered in docs/paraphrase-protocol.md; do not change ----------
 MIN_OVERLAP_DROP = 0.25      # manipulation check
@@ -374,6 +375,8 @@ def main() -> int:
     qdf = qdf.merge(ov[["id", "question_type", "overlap_before", "overlap_after"]]
                     .assign(id=ov["id"].astype(str)), on="id", how="left")
     qdf.to_csv(q_path, index=False)
+    record([out_path, q_path], gold=[eval_dir / "gold_questions.jsonl",
+                                     eval_dir / "gold_paraphrased.jsonl"])
     print(f"\n  -> {out_path}\n  -> {q_path}\n")
     return 0
 
