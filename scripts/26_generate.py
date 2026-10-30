@@ -134,7 +134,8 @@ def main() -> int:
     suffix = "_dryrun" if args.dry_run else ""
     answers_path = TABLES_DIR / f"generation_answers{suffix}.csv"
     faith_path = TABLES_DIR / f"generation_faithfulness{suffix}.csv"
-    for p in (answers_path, faith_path):     # a stale output never reads as a result
+    # A stale output never reads as a result; only the tables this run writes.
+    for p in (answers_path, faith_path) if args.judge else (answers_path,):
         p.unlink(missing_ok=True)
 
     store = ChromaStore(CHROMA_DIR, cfg["index"]["collection"])
@@ -170,10 +171,17 @@ def main() -> int:
                     label = "unanswerable"
                 else:
                     label = "complete" if len(found) == len(q.evidence) else "incomplete"
+                # Citation accuracy, mechanical (secondary 3): which cited
+                # passages overlap a gold span, and which gold spans they cover.
+                cited = [a.hits[i - 1] for i in a.citations]
+                cited_on_gold = sum(1 for h in cited if spans_in_context(q, [h]))
+                spans_cited = spans_in_context(q, cited)
                 row = a.to_row()
                 row.update(id=q.id, question_type=q.question_type, evidence=label,
                            gold_spans_in_context=";".join(str(i) for i in sorted(found)),
                            n_gold_spans=len(q.evidence),
+                           cited_on_gold=cited_on_gold,
+                           gold_spans_cited=";".join(str(i) for i in sorted(spans_cited)),
                            out_of_range_citations=out_of_range(a.answer, len(a.hits)))
                 rows.append(row)
                 print(f"  {q.id} {strategy:<19} {label:<12} "
@@ -232,15 +240,19 @@ def main() -> int:
                           max_total_tokens=max(0, args.budget_tokens - llm.tokens_used))
         same = 0
         repeat = RAGPipeline(retriever, fresh, k=K)
-        for q in gold:
-            again = repeat.answer(q.question, strategy="abstain").answer
-            first = out[(out["id"] == q.id) & (out["strategy"] == "abstain")]["answer"].iloc[0]
-            same += again == first
-            if again != first:
-                print(f"  3 {q.id}: second call differs\n    first : {first[:200]}\n"
-                      f"    second: {again[:200]}")
-        print(f"  3 determinism           : {same}/{len(gold)} abstain answers identical "
-              f"on a second, uncached call")
+        try:
+            for q in gold:
+                again = repeat.answer(q.question, strategy="abstain").answer
+                first = out[(out["id"] == q.id) & (out["strategy"] == "abstain")]["answer"].iloc[0]
+                same += again == first
+                if again != first:
+                    print(f"  3 {q.id}: second call differs\n    first : {first[:200]}\n"
+                          f"    second: {again[:200]}")
+            print(f"  3 determinism           : {same}/{len(gold)} abstain answers identical "
+                  f"on a second, uncached call")
+        except TokenBudgetExceeded:
+            print("  3 determinism           : SKIPPED, generation budget exhausted")
+            problems.append("check 3: determinism not measured (budget)")
         print(f"    (determinism calls: {fresh.calls_made}, {fresh.tokens_used:,} tokens)")
 
     new = out[~out["cached"]]
@@ -274,9 +286,29 @@ def main() -> int:
     return 0
 
 
+def refusals(out: pd.DataFrame, dry_run: bool) -> pd.Series:
+    """Which answers are refusals: the regex, corrected by the hand checks.
+
+    Before labelling the regex is all there is. Once generation_checks.csv
+    exists (27 --read), the owner's REFUSAL/ANSWER label overrides it, so a
+    re-run of --judge picks up any answer the regex wrongly called a refusal;
+    everything already judged comes from the checkpoint.
+    """
+    refused = out["abstained"].astype(str) == "True"
+    path = TABLES_DIR / "generation_checks.csv"
+    if dry_run or not path.exists():
+        return refused
+    checks = pd.read_csv(path, dtype=str)
+    checks = checks[checks["check"] == "refusal"]
+    hand = {(r["id"], r["strategy"]): r["final"] == "REFUSAL" for _, r in checks.iterrows()}
+    keys = list(zip(out["id"], out["strategy"]))
+    return pd.Series([hand.get(k, bool(f)) for k, f in zip(keys, refused)], index=out.index)
+
+
 def run_judge(out, gold, texts, judge_model, budget, faith_path, dry_run, problems) -> int:
     questions = {q.id: q for q in gold}
-    todo = out[(out["question_type"] != "unanswerable") & (~out["abstained"])]
+    refused = refusals(out, dry_run)
+    todo = out[(out["question_type"] != "unanswerable") & (~refused)]
     meter = fa.UsageMeter(max_total_tokens=budget)
     metric = fa.make_metric(judge_model, meter)
     ckpt = fa.Checkpoint(JUDGE_CHECKPOINT)

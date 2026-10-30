@@ -32,6 +32,7 @@ Two instruments, because they fail differently:
                   family-wise error rate without assuming independence, and
                   is uniformly more powerful than plain Bonferroni.
 
+McNemar and Holm live in rageval.evaluation.stats (shared with 28).
 No scipy: the exact binomial is a few lines of `math.comb`, and adding a
 dependency for it would be worse than writing it.
 
@@ -48,7 +49,6 @@ from __future__ import annotations
 import argparse
 import sys
 from itertools import combinations
-from math import comb
 from pathlib import Path
 
 import numpy as np
@@ -56,33 +56,7 @@ import pandas as pd
 
 from rageval.config import TABLES_DIR
 from rageval.evaluation.spans import span_indices
-
-
-def binom_two_sided(b: int, c: int) -> float:
-    """Exact two-sided binomial p for b successes in b+c trials at p=0.5.
-
-    This is McNemar's exact test. With no discordant pairs the runs are
-    indistinguishable on every span and p is 1 by definition.
-    """
-    n = b + c
-    if n == 0:
-        return 1.0
-    lo = min(b, c)
-    tail = sum(comb(n, i) for i in range(lo + 1)) / (2 ** n)
-    return min(1.0, 2 * tail)
-
-
-def holm(pvals: list[float]) -> list[float]:
-    """Holm-Bonferroni adjusted p-values, order preserved."""
-    m = len(pvals)
-    order = sorted(range(m), key=lambda i: pvals[i])
-    adjusted = [0.0] * m
-    running = 0.0
-    for rank, i in enumerate(order):
-        val = (m - rank) * pvals[i]
-        running = max(running, val)          # enforce monotonicity
-        adjusted[i] = min(1.0, running)
-    return adjusted
+from rageval.evaluation.stats import binom_two_sided, holm
 
 
 def load_run(tag: str, col: str, tables_dir: Path):
