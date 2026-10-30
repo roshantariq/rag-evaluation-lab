@@ -2355,6 +2355,138 @@ text of the three u001 answers, which will reappear in the blind labelling
 worksheet. Only the regex's first-pass flag for them appeared in the run
 output.
 
+### Full run, labelling and result: abstention instruction REDUCES hallucination
+
+**Generation** (`2280404`, `generation_answers.csv`): 74 questions × 3
+strategies = 222 answers, 207 new and 15 from the dry run's cache,
+≈ $0.33. Integrity: prompt isolation 74/74, retrieval identity 174/174
+scorable rows against `retrieval_bm25.csv` at k = 20, no answer cut off
+(longest 168 tokens), one served generator version.
+
+**Labelling** (`27_label_worksheet.py`). The 48 unanswerable answers and 23
+check items (refusal and ambiguity) were shuffled with seed 20260827,
+strategy hidden and the confidence line stripped. Claude labelled both
+sheets first and committed them (`37319f3`) with the keys untracked; the
+owner then reviewed every item blind and the keys were committed only
+after both sheets were complete (`23c4b79`). The owner's label is final.
+
+| sheet | agreement | disagreements |
+|---|---|---|
+| primary, 48 | 45/48 | u007, u014, u004 `naive`: Claude ABSTAIN → owner HALLUCINATE |
+| checks, 23 | 20/23 | a006, a003 ×2 ambiguity: Claude ACKNOWLEDGES → owner SINGLE |
+
+All three primary disagreements are the same shape: the answer says the
+fact is not in the context, then offers a neighbouring fact as the answer
+(24-hour precipitation skill for a nowcasting question, "atmospheric and
+oceanic" skill for a sea-ice question, "outperforms LINDA" for a CSI
+question). Claude had read the "however" as setting the extra material
+apart; the owner read it as a substitute answer, which the rubric's
+"refuses and then answers" clause counts as HALLUCINATE. The three check
+disagreements are the stricter reading of "gives more than one answer"
+that Claude had flagged as borderline.
+
+**Judging** (`generation_faithfulness.csv`): 169 answers (157 judged in
+this run, 12 from the dry-run checkpoint), refusals excluded by the
+owner-corrected labels, 0 answers with no claims, 0 NaN, one served judge
+version. Estimated ≈ $5.24 by the script's token count; the owner's
+dashboard read **$4.60 total** shortly after the run. The gap is
+unresolved — usage reporting lag, or the script's estimate running high —
+and is to be re-read from the dashboard. The script's estimates are not the
+spend of record.
+
+**Result** (`28_generation_result.py`, `generation_result.csv`):
+
+| 16 unanswerable | hallucinated |
+|---|---|
+| `naive` | **8/16** (0.500) |
+| `abstain` | **0/16** |
+| `abstain_confidence` | **0/16** |
+
+| comparison | delta | 95% CI | discordant | McNemar p | Holm p | outcome |
+|---|---|---|---|---|---|---|
+| naive − abstain | **+0.500** | **[+0.250, +0.750]** | 8/0 | 0.0078 | 0.0156 | **reduces** |
+| abstain_confidence − abstain | +0.000 | [+0.000, +0.000] | 0/0 | 1.0000 | 1.0000 | reported only |
+
+Floor not reached (8 > 2); the interval excludes zero; **the
+pre-registered outcome is `reduces`.** Every discordant question moves the
+same way.
+
+*Robustness, exploratory:* on Claude's first-pass labels (the three
+disagreements as ABSTAIN), `naive` hallucinates on 5/16 and naive − abstain
+is +0.313 [+0.125, +0.563], McNemar p 0.0625 — still `reduces` under the
+interval rule. The outcome does not depend on the three labels the two
+labellers disagreed on; its size does.
+
+Secondaries (reported, not deciding):
+
+| | naive | abstain | abstain_confidence |
+|---|---|---|---|
+| refused, complete (33) | 0 | 0 | 0 |
+| refused, incomplete (25) | 0 | 3 | 2 |
+| faithfulness, complete | 0.896 (33) | 0.861 (33) | 0.887 (33) |
+| faithfulness, incomplete | 0.788 (25) | 0.897 (22) | 0.785 (23) |
+| citation precision | 0.343 | 0.393 | 0.373 |
+| citation recall | 0.657 | 0.621 | 0.667 |
+| ambiguous, acknowledges several | 2/6 | 2/6 | 1/6 |
+
+- Faithfulness, naive − abstain on the 55 questions both answered:
+  **−0.009 [−0.077, +0.056], within judge noise.** The instruction
+  changes whether the model answers, not how faithfully.
+- The instruction cost no refusal where all evidence was present; its 3
+  refusals are all on incomplete questions, where part of the evidence was
+  missing.
+- Citation precision counts only citations of chunks holding gold evidence
+  as correct; a citation of another supporting chunk counts against it.
+  It is a lower bound. No citation pointed outside the retrieved set.
+- Stated confidence (`abstain_confidence`): "high" on 32/33 complete and
+  **23/25 incomplete** answers; on its 16 abstentions "low" 11 times and no
+  confidence line 5 times. It does not signal answering from incomplete
+  context.
+- `abstain`'s higher faithfulness on incomplete questions (0.897 vs 0.861)
+  plausibly follows from its 3 refusals being excluded from the incomplete
+  group; untested, and the complete/incomplete gaps carry no interval.
+
+### Predictions made in advance, and how they landed
+
+| prediction (`docs/phase7-protocol.md`) | outcome |
+|---|---|
+| 1. `naive` hallucinates on 2 to 6 of 16 | **Wrong** — 8 (5 on Claude's labels) |
+| 2. naive − abstain positive and not separable | **Wrong** — +0.500, CI excludes zero |
+| 3. `abstain` refuses more answerable questions, concentrated in incomplete | **Confirmed** — 3 vs 0, all incomplete |
+| 4. `abstain_confidence` and `abstain` differ by at most one question on every measure | **Confirmed** — 0 on hallucination, 1 on refusal, 1 on ambiguity |
+| 5. Faithfulness higher on complete than incomplete, every strategy | **Partly wrong** — naive and abstain_confidence yes (≈ 0.10), abstain no |
+
+Predictions 1 and 2 were built on Phase 3's observation that the model
+refused its one absent fact in prose. That question asked for a fact with
+no neighbour in the corpus. The Phase 7 unanswerable questions were built
+to sit next to a real fact, and that is exactly where `naive` fails: it
+answers the neighbouring question. The Phase 3 risk ("instruction-tuned
+models refuse well, so this may measure small") was real for isolated
+absences and wrong for adjacent ones.
+
+**Decision.** The headline stands as planned: on this corpus and model, an
+explicit abstention instruction takes hallucination on deliberately
+unanswerable questions from 8/16 to 0/16 without refusing any question
+whose evidence was complete. The confidence variant adds nothing.
+
+**Limits.** 16 questions, hence a ±0.25 interval: the direction is
+established, the size is not. One generator, one corpus, one wording per
+strategy, one sample per cell (determinism measured at 2/5 to 4/5 word for
+word). Hallucination labels are human judgement, with all disagreement on
+refuse-then-answer cases. Faithfulness is one judge with test-retest noise
+0.083.
+
+### Standing lesson — Phase 7
+
+**"Refuses well" was measured on the wrong kind of absence.** A model that
+refuses a question about something the corpus never mentions will still
+answer a question whose answer is *next to* something the corpus does
+mention, by answering the neighbour. The failure is substitution, not
+invention, and it hides behind a refusal sentence: all three answers the
+labellers split on begin by saying the fact is not there. A refusal
+regex, and a first-pass labeller reading "however" charitably, both score
+that as abstention. The second human read is what moved 5/16 to 8/16.
+
 ---
 
 ## Plan amendments
