@@ -40,6 +40,7 @@ from pathlib import Path
 import pandas as pd
 
 from rageval.config import TABLES_DIR
+from rageval.evaluation import decision
 
 # --- pre-registered in docs/chunk-filter-protocol.md; do not change --------
 CONTROL = "bm25"
@@ -53,20 +54,12 @@ STABILITY = "stability_bm25_filter030_filter040_filter050_B20000.csv"
 
 def classify(lo: float, hi: float, win_rate: float) -> str:
     """The protocol's four-way table, identical to sweep 3's."""
-    if hi < 0:
-        return "worse"
-    if lo > 0:
-        return "replaces" if win_rate >= WIN_THRESHOLD else "leaning"
-    return "not_separable"
+    return decision.classify(lo, hi, win_rate, WIN_THRESHOLD)
 
 
 def decide(outcomes: dict[str, str]) -> str:
     """The arm that replaces unfiltered BM25, or CONTROL if none does."""
-    winners = [a for a, o in outcomes.items() if o == "replaces"]
-    if len(winners) > 1:
-        # Win rates over one set of selections sum to at most 1.
-        raise ValueError(f"more than one arm clears a 90% win rate: {winners}")
-    return winners[0] if winners else CONTROL
+    return decision.decide(outcomes, CONTROL)
 
 
 def main() -> int:

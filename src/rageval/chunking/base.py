@@ -124,6 +124,12 @@ def chunk_document(
     """Chunk one extracted document, attaching provenance to every piece.
 
     `doc` is one of the JSON files written by scripts/02_extract_text.py.
+
+    The strategy name selects the chunker by prefix: `section*` and
+    `recursive*` dispatch to rageval.chunking.strategies; anything else is
+    fixed-size windows, so every existing `fixed_*` config behaves exactly
+    as before. Semantic chunks need an embedder and are built by
+    scripts/23_build_chunks.py instead.
     """
     text = doc["text"]
     count_tokens = count_tokens or get_token_counter()
@@ -138,6 +144,19 @@ def chunk_document(
             cursor = found
     section_at = _section_lookup(bounds)
 
+    if strategy.startswith("semantic"):
+        raise ValueError("semantic chunks need an embedder; build them with "
+                         "scripts/23_build_chunks.py")
+    if strategy.startswith("section"):
+        from rageval.chunking.strategies import section_chunks
+        spans = section_chunks(text, [b[0] for b in bounds], target_tokens,
+                               target_tokens // 4, count_tokens)
+    elif strategy.startswith("recursive"):
+        from rageval.chunking.strategies import recursive_chunks
+        spans = recursive_chunks(text, target_tokens, count_tokens)
+    else:
+        spans = fixed_size_chunks(text, target_tokens, overlap_tokens, count_tokens)
+
     return [
         Chunk(
             arxiv_id=doc["arxiv_id"],
@@ -149,7 +168,7 @@ def chunk_document(
             title=doc.get("title", ""),
             published=doc.get("published", ""),
         )
-        for start, end in fixed_size_chunks(text, target_tokens, overlap_tokens, count_tokens)
+        for start, end in spans
     ]
 
 
