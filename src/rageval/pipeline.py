@@ -99,9 +99,15 @@ def detect_abstention(answer: str) -> bool:
     return not _CITATION.search(answer)
 
 class RAGPipeline:
-    def __init__(self, store, encoder, llm, k: int = 5, strategy: str = "abstain"):
-        self.store = store
-        self.encoder = encoder
+    """Retrieve, prompt, generate.
+
+    `retriever` is anything with `query(text, k)`; build it from the config
+    with `rageval.retrieve.factory.build_retriever`, so generation uses the
+    retriever Phase 6 selected rather than a hard-wired one.
+    """
+
+    def __init__(self, retriever, llm, k: int = 5, strategy: str = "abstain"):
+        self.retriever = retriever
         self.llm = llm
         self.k = k
         self.strategy = strategy
@@ -110,7 +116,7 @@ class RAGPipeline:
         import time
 
         t0 = time.perf_counter()
-        hits = self.store.query(self.encoder.encode_query(question), k=k or self.k)
+        hits = self.retriever.query(question, k=k or self.k)
         return hits, time.perf_counter() - t0
 
     def answer(self, question: str, k: int | None = None,

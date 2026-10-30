@@ -107,13 +107,9 @@ class TestPromptStrategies:
 
 
 class TestPipeline:
-    class StubStore:
-        def query(self, emb, k=5):
+    class StubRetriever:
+        def query(self, text, k=5):
             return HITS[:k]
-
-    class StubEncoder:
-        def encode_query(self, q):
-            return [0.0]
 
     class StubLLM:
         def complete(self, system, user):
@@ -124,7 +120,7 @@ class TestPipeline:
                                model="stub", prompt_tokens=120, completion_tokens=18)
 
     def pipe(self, **kw):
-        return RAGPipeline(self.StubStore(), self.StubEncoder(), self.StubLLM(), **kw)
+        return RAGPipeline(self.StubRetriever(), self.StubLLM(), **kw)
 
     def test_citations_map_to_chunk_ids(self):
         a = self.pipe(k=5).answer("How does ConvLSTM work?")

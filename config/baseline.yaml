@@ -13,8 +13,11 @@
 # runs of this config their own tag (the BM25 run is `bm25`).
 # 10_eval_retrieval.py defaults to --tag baseline, so always pass --tag.
 #
-# retrieval.mode is read only by 10_eval_retrieval.py. 04_search.py,
-# 05_ask.py and RAGPipeline are dense-only and ignore it.
+# retrieval.mode is read by 10_eval_retrieval.py and, since Phase 7, by
+# RAGPipeline and 05_ask.py through rageval.retrieve.factory (dense | bm25).
+# Generation's BM25 retrieval was checked against retrieval_bm25.csv: same
+# spans found at k=10 and k=20 on all 58 questions. 04_search.py is still
+# a dense-only ad-hoc tool.
 #
 # retrieval.k is for generation only; the harness scores every k up to
 # --k-max. Set to 20 by sweep 4 (docs/k-sweep-protocol.md): every step on

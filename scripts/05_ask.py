@@ -16,6 +16,7 @@ from rageval.embed.encoder import Encoder
 from rageval.generate.llm import LLMClient
 from rageval.generate.prompts import PROMPT_STRATEGIES
 from rageval.pipeline import RAGPipeline
+from rageval.retrieve.factory import build_retriever
 from rageval.store.chroma_store import ChromaStore
 
 
@@ -42,9 +43,16 @@ def main() -> int:
         print("Index is empty. Run scripts/03_build_index.py first.")
         return 1
 
+    try:
+        retriever = build_retriever(
+            cfg, store, make_encoder=lambda: Encoder(cfg["embedding"]["model"],
+                                                     cache_path=EMBED_CACHE))
+    except ValueError as e:
+        print(e)
+        return 1
+
     pipe = RAGPipeline(
-        store=store,
-        encoder=Encoder(cfg["embedding"]["model"], cache_path=EMBED_CACHE),
+        retriever=retriever,
         llm=LLMClient(
             provider=gen.get("provider", "openai"),
             model=gen.get("model", "gpt-4o-mini"),
@@ -60,7 +68,8 @@ def main() -> int:
     result = pipe.answer(question)
 
     print(f"\nQ: {question}")
-    print(f"   strategy={result.strategy}  k={result.k}"
+    print(f"   retrieval={cfg['retrieval'].get('mode', 'dense')}  "
+          f"strategy={result.strategy}  k={result.k}"
           f"{'  [cached]' if result.cached else ''}")
     print("=" * 78)
 

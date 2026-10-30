@@ -2157,6 +2157,34 @@ its run.
 
 ---
 
+## Phase 7 — Generation evaluation
+
+### Blocker resolved: generation now uses the selected retriever
+
+**The problem, recorded since sweep 2.** `RAGPipeline` and `05_ask.py`
+queried the vector store directly and ignored `retrieval.mode`. Phase 6
+selected BM25, so measuring abstention through the pipeline would have
+measured the arm that lost sweep 2, and retrieved context is exactly what
+abstention depends on.
+
+**Built.** `rageval/retrieve/factory.py`: `build_retriever(cfg, store)`
+returns the retriever `retrieval.mode` names. For `bm25` that is
+`BM25Retriever` over the collection's stored records, the same corpus and
+class `10_eval_retrieval.py` scores; no embedding model is loaded. For
+`dense` it wraps the store and its encoder. `hybrid` is refused for
+generation: it is a harness arm, not a selected pipeline. `RAGPipeline`
+now takes a `retriever` with `query(text, k)` instead of a store and an
+encoder, and `05_ask.py` builds it from the config and prints the mode.
+
+**Verified end to end, with no API call.** The pipeline's own retrieval
+step, built from `baseline.yaml` (`mode: bm25`, `k: 20`), was run on all
+58 scorable questions. The gold spans its hits overlap at k=10 and k=20
+match `retrieval_bm25.csv` in all 116 comparisons. Generation and the
+harness now retrieve identically, so Phase 6's numbers describe the
+context Phase 7's generator will see.
+
+---
+
 ## Plan amendments
 
 **Gold-set evidence anchors to character spans, not chunk IDs.** Recorded
