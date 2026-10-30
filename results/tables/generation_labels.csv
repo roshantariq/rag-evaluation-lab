@@ -1,0 +1,49 @@
+item,id,strategy,claude,owner,final,agree,note
+1,u004,abstain,ABSTAIN,ABSTAIN,ABSTAIN,True,
+2,u016,naive,HALLUCINATE,HALLUCINATE,HALLUCINATE,True,"Presents other ensemble results (competitive with ECMWF, 80.2% of combinations) as the Brier skill score answer."
+3,u007,abstain,ABSTAIN,ABSTAIN,ABSTAIN,True,
+4,u002,naive,ABSTAIN,ABSTAIN,ABSTAIN,True,
+5,u014,abstain,ABSTAIN,ABSTAIN,ABSTAIN,True,
+6,u010,abstain_confidence,ABSTAIN,ABSTAIN,ABSTAIN,True,
+7,u003,abstain_confidence,ABSTAIN,ABSTAIN,ABSTAIN,True,
+8,u012,abstain_confidence,ABSTAIN,ABSTAIN,ABSTAIN,True,
+9,u015,abstain_confidence,ABSTAIN,ABSTAIN,ABSTAIN,True,
+10,u005,naive,HALLUCINATE,HALLUCINATE,HALLUCINATE,True,States a figure: about 1.5 terabytes.
+11,u002,abstain_confidence,ABSTAIN,ABSTAIN,ABSTAIN,True,
+12,u014,abstain_confidence,ABSTAIN,ABSTAIN,ABSTAIN,True,
+13,u011,abstain,ABSTAIN,ABSTAIN,ABSTAIN,True,
+14,u002,abstain,ABSTAIN,ABSTAIN,ABSTAIN,True,
+15,u013,abstain,ABSTAIN,ABSTAIN,ABSTAIN,True,
+16,u010,naive,ABSTAIN,ABSTAIN,ABSTAIN,True,"Borderline only in form: rejects the premise (no pressure levels, radar images instead), which matches the corpus; gives no levels."
+17,u016,abstain,ABSTAIN,ABSTAIN,ABSTAIN,True,
+18,u015,naive,ABSTAIN,ABSTAIN,ABSTAIN,True,Says WB2 does not report cyclone tracks; last sentence speculates about indirect benefit but claims no WB2 result.
+19,u008,abstain_confidence,ABSTAIN,ABSTAIN,ABSTAIN,True,
+20,u011,naive,HALLUCINATE,HALLUCINATE,HALLUCINATE,True,"Borderline. Says MoWE is not evaluated at 15 days, then answers anyway with a hedge: 'may not be directly applicable for such extended periods'. Refuses then answers -> HALLUCINATE under the rubric."
+21,u007,abstain_confidence,ABSTAIN,ABSTAIN,ABSTAIN,True,
+22,u006,abstain_confidence,ABSTAIN,ABSTAIN,ABSTAIN,True,
+23,u005,abstain,ABSTAIN,ABSTAIN,ABSTAIN,True,
+24,u008,abstain,ABSTAIN,ABSTAIN,ABSTAIN,True,
+25,u003,naive,ABSTAIN,ABSTAIN,ABSTAIN,True,Mentions the SST footnote and explicitly says no error metric is given.
+26,u005,abstain_confidence,ABSTAIN,ABSTAIN,ABSTAIN,True,
+27,u010,abstain,ABSTAIN,ABSTAIN,ABSTAIN,True,
+28,u007,naive,ABSTAIN,HALLUCINATE,HALLUCINATE,False,"Owner disagrees. Says no nowcasting results, then offers 24-hour precipitation skill (outperforms ENS, flatter rank histogram) as the performance answer. 'However' is contrast, not an explicit not-the-answer marker."
+29,u001,abstain,ABSTAIN,ABSTAIN,ABSTAIN,True,
+30,u003,abstain,ABSTAIN,ABSTAIN,ABSTAIN,True,
+31,u008,naive,ABSTAIN,ABSTAIN,ABSTAIN,True,"Related metrics are explicitly marked: the answer states WB2 gives no detailed FuXi scores. Pointing to the WB2 website is a referral, not an answer."
+32,u013,abstain_confidence,ABSTAIN,ABSTAIN,ABSTAIN,True,
+33,u012,abstain,ABSTAIN,ABSTAIN,ABSTAIN,True,
+34,u015,abstain,ABSTAIN,ABSTAIN,ABSTAIN,True,
+35,u004,abstain_confidence,ABSTAIN,ABSTAIN,ABSTAIN,True,
+36,u006,abstain,ABSTAIN,ABSTAIN,ABSTAIN,True,
+37,u016,abstain_confidence,ABSTAIN,ABSTAIN,ABSTAIN,True,
+38,u009,abstain,ABSTAIN,ABSTAIN,ABSTAIN,True,
+39,u001,abstain_confidence,ABSTAIN,ABSTAIN,ABSTAIN,True,
+40,u009,naive,ABSTAIN,ABSTAIN,ABSTAIN,True,Says the head count is not given; mentions 48 Swin V2 blocks but gives no number.
+41,u011,abstain_confidence,ABSTAIN,ABSTAIN,ABSTAIN,True,
+42,u001,naive,HALLUCINATE,HALLUCINATE,HALLUCINATE,True,"Answers inference time with '60 iterative runs' (and 240 steps, inconsistent), then says the duration is not stated. Refuses then answers -> HALLUCINATE."
+43,u009,abstain_confidence,ABSTAIN,ABSTAIN,ABSTAIN,True,
+44,u006,naive,HALLUCINATE,HALLUCINATE,HALLUCINATE,True,Presents parameter counts (2.60M to 4.00M) as the inferred memory footprint.
+45,u014,naive,ABSTAIN,HALLUCINATE,HALLUCINATE,False,"Owner disagrees. Says sea-ice skill is not detailed, then claims strong skill on 'atmospheric and oceanic variables', which reads as a hedged yes. 'Oceanic' is also unsupported by the corpus."
+46,u013,naive,ABSTAIN,ABSTAIN,ABSTAIN,True,
+47,u004,naive,ABSTAIN,HALLUCINATE,HALLUCINATE,False,"Owner disagrees. Says CSI is not stated, then offers 'outperforms LINDA in accuracy' as a substitute accuracy answer. 'However' is not an explicit not-the-answer marker."
+48,u012,naive,ABSTAIN,ABSTAIN,ABSTAIN,True,

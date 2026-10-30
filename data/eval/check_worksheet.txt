@@ -20,8 +20,8 @@ reference answer: The corpus contains several distinct FuXi systems and the answ
 answer:
     FuXi forecasts weather up to 15 days ahead, utilizing a cascade model architecture optimized for specific forecast time windows of 0-5 days, 5-10 days, and 10-15 days [1], [9].
 claude: SINGLE
-owner: 
-note: 
+owner: SINGLE
+note: The 0-5, 5-10 and 10-15 day windows are stages of one 15-day system, not alternative horizons. FuXi-Extreme (5 days) and FuXi-RTM (10 days) not mentioned.
 
 === item 02 of 23 ===
 check: refusal
@@ -30,8 +30,8 @@ reference answer: About an hour of compute time.
 answer:
     INSUFFICIENT CONTEXT
 claude: REFUSAL
-owner: 
-note: 
+owner: REFUSAL
+note: Answerable question (about an hour of compute); refusal is a retrieval or answering failure.
 
 === item 03 of 23 ===
 check: refusal
@@ -40,8 +40,8 @@ reference answer: GraphCast produces a 10-day forecast in under a minute on a si
 answer:
     INSUFFICIENT CONTEXT
 claude: REFUSAL
-owner: 
-note: 
+owner: REFUSAL
+note: Answerable question; refusal is a retrieval or answering failure.
 
 === item 04 of 23 ===
 check: ambiguity
@@ -50,8 +50,8 @@ reference answer: The question is ambiguous because skillful lead time depends o
 answer:
     The skillful forecast lead time refers to the duration for which a weather forecasting model can produce skillful predictions, typically defined by an anomaly correlation coefficient (ACC) greater than 0.6. For the FuXi system, the skillful lead time is extended to 14.5 days for 2-meter temperature (T2M) and 10.5 days for geopotential height at 500 hPa (Z500) [1], [6], [19]. This indicates that FuXi significantly improves upon the lead times achieved by traditional models like ECMWF HRES and Graphcast.
 claude: ACKNOWLEDGES
-owner: 
-note: Gives two lead times (T2M 14.5 d, Z500 10.5 d) by variable; silently assumes FuXi.
+owner: ACKNOWLEDGES
+note: Gives two lead times by variable (T2M 14.5 d, Z500 10.5 d), which covers the variable ambiguity. Silently assumes FuXi, so the model ambiguity is not acknowledged.
 
 === item 05 of 23 ===
 check: ambiguity
@@ -60,7 +60,7 @@ reference answer: The question does not identify a model, and the corpus gives d
 answer:
     The model uses 37 vertical levels, as indicated in the context of GraphCast, which operates on a 0.25° latitude-longitude resolution and 6-hour time steps due to the ERA5 training data's native resolution [5].
 claude: SINGLE
-owner: 
+owner: SINGLE
 note: 
 
 === item 06 of 23 ===
@@ -70,8 +70,8 @@ reference answer: The architecture is ConvLSTM. Its paper explains that padding 
 answer:
     INSUFFICIENT CONTEXT
 claude: REFUSAL
-owner: 
-note: 
+owner: REFUSAL
+note: Answerable multi-hop question (ConvLSTM zero-padding); refusal is a retrieval or answering failure.
 
 === item 07 of 23 ===
 check: ambiguity
@@ -80,7 +80,7 @@ reference answer: The question is ambiguous because resolution varies by dataset
 answer:
     The spatial resolution of the data used in the RainfallBench dataset is approximately 9 km (0.1° x 0.1°) [11]. This high spatial resolution is crucial for providing accurate estimates of surface conditions at specific locations. Additionally, the dataset offers a long and consistent historical record, with data available from 1950 to within a few days of the present [11].
 claude: SINGLE
-owner: 
+owner: SINGLE
 note: One dataset (RainfallBench/ERA5-Land, 0.1 deg) given as the answer.
 
 === item 08 of 23 ===
@@ -90,8 +90,8 @@ reference answer: The corpus contains several distinct FuXi systems and the answ
 answer:
     FuXi forecasts for up to 15 days ahead, utilizing a cascade model architecture optimized for specific forecast time windows of 0-5 days, 5-10 days, and 10-15 days [1], [9].
 claude: SINGLE
-owner: 
-note: 
+owner: SINGLE
+note: Same answer as item 01; the cascade windows are stages of one system.
 
 === item 09 of 23 ===
 check: ambiguity
@@ -100,8 +100,8 @@ reference answer: The question does not identify a model, and the corpus gives d
 answer:
     The model uses 37 vertical levels, as indicated in the context of GraphCast, which operates at this vertical resolution due to the native resolution of the ERA5 training data [5]. Additionally, other models mentioned also utilize 37 vertical levels [4], [6].
 claude: SINGLE
-owner: 
-note: Adds that other models also use 37 levels: still one number.
+owner: SINGLE
+note: Adds that other models also use 37 levels: still one number. That claim also contradicts the corpus (13, 32, 137 and others).
 
 === item 10 of 23 ===
 check: ambiguity
@@ -110,8 +110,8 @@ reference answer: The question is ambiguous and the corpus supports several diff
 answer:
     It takes approximately two days to fine-tune each of the cascaded FuXi models on a cluster of 8 Nvidia A100 GPUs [2].
 claude: SINGLE
-owner: 
-note: 
+owner: SINGLE
+note: Gives only the per-model fine-tuning time; no pre-training figure, no cascaded total, no WB2 discrepancy.
 
 === item 11 of 23 ===
 check: ambiguity
@@ -120,7 +120,7 @@ reference answer: The question does not identify a model, and the corpus gives d
 answer:
     The model uses 37 vertical levels, as indicated in the context of GraphCast, which operates at this vertical resolution due to the native resolution of the ERA5 training data [5].
 claude: SINGLE
-owner: 
+owner: SINGLE
 note: 
 
 === item 12 of 23 ===
@@ -130,8 +130,8 @@ reference answer: The corpus contains several distinct FuXi systems and the answ
 answer:
     FuXi forecasts for up to 15 days ahead, utilizing a cascade model architecture optimized for specific forecast time windows of 0-5 days, 5-10 days, and 10-15 days [1], [9].
 claude: SINGLE
-owner: 
-note: 
+owner: SINGLE
+note: Same answer as item 01.
 
 === item 13 of 23 ===
 check: ambiguity
@@ -140,8 +140,8 @@ reference answer: The question is ambiguous and the corpus supports several diff
 answer:
     It takes approximately two days to fine-tune each of the cascaded FuXi models on a cluster of 8 Nvidia A100 GPUs [2].
 claude: SINGLE
-owner: 
-note: 
+owner: SINGLE
+note: Same answer as item 10.
 
 === item 14 of 23 ===
 check: ambiguity
@@ -150,8 +150,8 @@ reference answer: The corpus describes several incompatible methods and the ques
 answer:
     The ensemble is generated by initializing a candidate state purely from noise and iteratively refining it based on the previous two atmospheric states using a neural network architecture that includes an encoder, processor, and decoder [1]. This process allows for the creation of multiple trajectories by repeating the initialization with different noise samples, resulting in an ensemble of forecasts [1]. Additionally, methods like the Latent Diffusion Model (LDM) and dropout techniques can also be employed to enhance the ensemble generation and improve forecast accuracy [10], [19].
 claude: ACKNOWLEDGES
-owner: 
-note: Borderline. Gives more than one answer, so ACKNOWLEDGES under the rubric's literal wording, but never says the question is ambiguous or asks which system is meant. GenCast's noise method is presented as the method; LDM and dropout as add-ons.
+owner: SINGLE
+note: Owner disagrees. Opens 'The ensemble is generated by...' and presents GenCast's noise method as the method. LDM and dropout are framed as ways to enhance it, not as other systems' methods, so no second answer is given.
 
 === item 15 of 23 ===
 check: ambiguity
@@ -160,8 +160,8 @@ reference answer: The question is ambiguous because resolution varies by dataset
 answer:
     The spatial resolution of the ERA5-Land dataset is approximately 9 km (0.1° x 0.1°) [11]. Additionally, the dataset used in the Longwang framework for downscaling precipitation has a patch size of 32×128×128 [8]. The context does not provide a specific resolution for other datasets mentioned.
 claude: ACKNOWLEDGES
-owner: 
-note: Borderline. Gives more than one answer, so ACKNOWLEDGES under the rubric's literal wording, but never says the question is ambiguous or asks which system is meant. Two datasets, and says others are unspecified.
+owner: SINGLE
+note: Owner disagrees. Patch size 32x128x128 is not a spatial resolution, so only one resolution (0.1 deg) is given. The closing sentence claims no other resolutions are in the context, presenting 0.1 deg as the only answer.
 
 === item 16 of 23 ===
 check: ambiguity
@@ -170,8 +170,8 @@ reference answer: The question is ambiguous because skillful lead time depends o
 answer:
     The skillful forecast lead time refers to the duration for which a weather forecasting model can produce accurate predictions, typically defined by an anomaly correlation coefficient (ACC) greater than 0.6. For the FuXi system, the skillful lead time extends to 14.5 days for 2-meter temperature (T2M) and 10.5 days for geopotential height at 500 hPa (Z500) [1], [6]. In general, advancements in machine learning models have led to improvements in forecast lead times, with some models achieving skillful forecasts beyond 10 days [2], [19].
 claude: ACKNOWLEDGES
-owner: 
-note: Gives two lead times by variable; silently assumes FuXi.
+owner: ACKNOWLEDGES
+note: Gives two lead times by variable; silently assumes FuXi. Same pattern as item 04.
 
 === item 17 of 23 ===
 check: refusal
@@ -180,8 +180,8 @@ reference answer: GraphCast produces a 10-day forecast in under a minute on a si
 answer:
     INSUFFICIENT CONTEXT
 claude: REFUSAL
-owner: 
-note: 
+owner: REFUSAL
+note: Same question as item 03; refusal is a retrieval or answering failure.
 
 === item 18 of 23 ===
 check: ambiguity
@@ -190,8 +190,8 @@ reference answer: The question is ambiguous because resolution varies by dataset
 answer:
     The spatial resolution of the data used in the RainfallBench dataset is approximately 9 km (0.1° x 0.1°) [11]. Additionally, the dataset mentioned in the WeatherBench context offers a four times higher horizontal resolution than all previous studies [1]. This higher resolution is crucial for providing more accurate estimates of surface conditions.
 claude: ACKNOWLEDGES
-owner: 
-note: Borderline. Gives more than one answer, so ACKNOWLEDGES under the rubric's literal wording, but never says the question is ambiguous or asks which system is meant. RainfallBench 0.1 deg plus a relative WeatherBench claim.
+owner: SINGLE
+note: Owner disagrees. Only one resolution value (0.1 deg). The WeatherBench sentence is a relative claim ('four times higher') with no value, so it is not a second answer. The claim itself is unverified against the corpus.
 
 === item 19 of 23 ===
 check: ambiguity
@@ -200,8 +200,8 @@ reference answer: The question is ambiguous because skillful lead time depends o
 answer:
     The skillful forecast lead time is defined as the period during which the anomaly correlation coefficient (ACC) is greater than 0.6. For the FuXi system, the lead time extends to 14.5 days for T2M and 10.5 days for Z500, surpassing the lead times achieved by ECMWF HRES and Graphcast, which are 10 days for T2M and 9.25 days for Z500, respectively [1], [6], [19].
 claude: ACKNOWLEDGES
-owner: 
-note: Gives lead times by variable and for three models.
+owner: ACKNOWLEDGES
+note: Gives lead times by variable and for three models: the strongest acknowledgement among the lead-time items.
 
 === item 20 of 23 ===
 check: ambiguity
@@ -210,7 +210,7 @@ reference answer: The corpus describes several incompatible methods and the ques
 answer:
     Ensembles can be generated using various methods, including perturbing initial conditions or employing generative models. For instance, GenCast generates an ensemble by initializing future atmospheric states from noise and refining them iteratively based on previous states, producing multiple trajectories [1]. Similarly, the ViT-LDM model creates an enlarged generative ensemble by post-processing precipitation forecasts to ensure spatiotemporal consistency and improve the characterization of extreme precipitation events [10].
 claude: ACKNOWLEDGES
-owner: 
+owner: ACKNOWLEDGES
 note: Says ensembles can be generated by various methods and names several: the clearest acknowledgement.
 
 === item 21 of 23 ===
@@ -220,8 +220,8 @@ reference answer: The question is ambiguous and the corpus supports several diff
 answer:
     FuXi took approximately two days to fine-tune each of the cascaded models on a cluster of 8 Nvidia A100 GPUs [2].
 claude: SINGLE
-owner: 
-note: 
+owner: SINGLE
+note: Same answer as item 10.
 
 === item 22 of 23 ===
 check: ambiguity
@@ -230,8 +230,8 @@ reference answer: The corpus describes several incompatible methods and the ques
 answer:
     The ensemble is generated by initializing a candidate state purely from noise and iteratively refining it based on previous atmospheric states using a neural network architecture that includes an encoder, processor, and decoder [1]. Additionally, different noise samples can be used to repeat the process, producing multiple trajectories that form the ensemble [1]. In the case of the ViT-LDM, the ensemble is produced by conditional sampling from bias-corrected ensemble members, ensuring spatial consistency in precipitation forecasts [2].
 claude: ACKNOWLEDGES
-owner: 
-note: Borderline. Gives more than one answer, so ACKNOWLEDGES under the rubric's literal wording, but never says the question is ambiguous or asks which system is meant. GenCast and ViT-LDM methods.
+owner: ACKNOWLEDGES
+note: Borderline. Never says the question is ambiguous, but gives a second method explicitly attributed to a different system ('In the case of the ViT-LDM'), so it gives more than one answer. Contrast item 14, where the extras are enhancements to one method.
 
 === item 23 of 23 ===
 check: refusal
@@ -240,5 +240,5 @@ reference answer: The architecture is ConvLSTM. Its paper explains that padding 
 answer:
     INSUFFICIENT CONTEXT
 claude: REFUSAL
-owner: 
-note: 
+owner: REFUSAL
+note: Same question as item 06; refusal is a retrieval or answering failure.
