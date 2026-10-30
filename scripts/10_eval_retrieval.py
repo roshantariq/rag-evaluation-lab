@@ -37,6 +37,12 @@ still count as relevant, so a filter that deletes evidence is charged for
 it. An unfiltered BM25 is built alongside, and each question records how
 many of its unfiltered top 10 the filter removed: the slots the filter
 could free.
+
+`--chunks <name>` scores a chunk set built by 23_build_chunks.py
+(results/tables/chunks_<name>.csv) instead of the Chroma collection: the
+spans are read, sliced from the frozen extraction, and indexed by BM25
+(bm25 mode only, since there are no embeddings). Relevant-chunk counts
+come from the same spans, so nDCG denominators match what is retrieved.
 """
 
 from __future__ import annotations
@@ -85,6 +91,7 @@ from rageval.retrieve.fusion import (
 )
 from rageval.retrieve.rerank import Reranker
 from rageval.store.chroma_store import ChromaStore
+from rageval.store.chroma_store import Retrieved as StoreRecord
 
 MODES = ("dense", "bm25", "hybrid")
 FUSIONS = ("rrf", "interleave")
@@ -122,6 +129,39 @@ def rebuild_chunks(arxiv_ids, cfg) -> dict[str, list]:
         out[arxiv_id] = chunk_document(
             doc, strategy=strategy, target_tokens=target, overlap_tokens=overlap
         )
+    return out
+
+
+def load_chunk_set(name: str) -> dict[str, list[StoreRecord]]:
+    """A committed chunk set as store records, sliced from the frozen text.
+
+    Refuses a span outside its paper, an untrimmed span, or a paper
+    missing from the extraction, rather than scoring a corrupt set.
+    """
+    path = TABLES_DIR / f"chunks_{name}.csv"
+    if not path.exists():
+        raise ValueError(f"no chunk set at {path}; build it with 23_build_chunks.py")
+    spans = pd.read_csv(path)
+    out: dict[str, list[StoreRecord]] = {}
+    for arxiv_id, group in spans.groupby("arxiv_id", sort=True):
+        p = interim_path(arxiv_id)
+        if not p.exists():
+            raise ValueError(f"{name}: no extracted text for {arxiv_id}")
+        with open(p, "r", encoding="utf-8") as fh:
+            doc = json.load(fh)
+        text = doc["text"]
+        recs = []
+        for a, b in zip(group["char_start"].astype(int), group["char_end"].astype(int)):
+            piece = text[a:b]
+            if not (0 <= a < b <= len(text)) or piece.strip() != piece:
+                raise ValueError(f"{name}: bad span {arxiv_id}:{a}-{b}")
+            recs.append(StoreRecord(chunk_id=f"{arxiv_id}:{a}-{b}", arxiv_id=arxiv_id,
+                                    text=piece, char_start=a, char_end=b, section="",
+                                    title=doc.get("title", ""), score=0.0, rank=0))
+        out[arxiv_id] = recs
+    n_papers = len(list(INTERIM_DIR.glob("*.json")))
+    if len(out) != n_papers:
+        raise ValueError(f"{name}: {len(out)} papers in the chunk set, {n_papers} extracted")
     return out
 
 
@@ -200,6 +240,9 @@ def main() -> int:
     parser.add_argument("--min-prose-ratio", type=float, default=None,
                         help="Drop chunks below this prose ratio from the BM25 "
                              "index (bm25 mode only). See rageval/chunking/quality.py.")
+    parser.add_argument("--chunks", default=None, metavar="NAME",
+                        help="Score results/tables/chunks_NAME.csv instead of the "
+                             "Chroma collection (bm25 mode only).")
     args = parser.parse_args()
 
     if args.rerank:
@@ -229,6 +272,16 @@ def main() -> int:
         print(f"--min-prose-ratio filters the lexical index only; mode is {mode!r}. "
               f"Filtering the dense store would need an index rebuild.")
         return 1
+    chunk_set = None
+    if args.chunks:
+        if mode != "bm25":
+            print(f"--chunks has no embeddings, so it is bm25 only; mode is {mode!r}.")
+            return 1
+        try:
+            chunk_set = load_chunk_set(args.chunks)
+        except ValueError as e:
+            print(f"  {e}")
+            return 1
 
     gold_path = Path(args.gold) if args.gold else (EVAL_DIR / "gold_questions.jsonl")
     questions = load_gold(gold_path)
@@ -247,7 +300,12 @@ def main() -> int:
 
     # --- what this run actually is, printed so the output is self-describing
     print(f"Retrieval mode : {mode}")
-    print(f"  collection   : {cfg['index']['collection']}  ({store.count()} chunks)")
+    if chunk_set is not None:
+        n_chunks = sum(len(v) for v in chunk_set.values())
+        print(f"  chunk set    : chunks_{args.chunks}.csv  ({n_chunks} chunks, "
+              f"{len(chunk_set)} papers); the collection is not used")
+    else:
+        print(f"  collection   : {cfg['index']['collection']}  ({store.count()} chunks)")
     if mode in ("dense", "hybrid"):
         print(f"  embedding    : {cfg['embedding']['model']}")
     if mode == "hybrid":
@@ -272,7 +330,8 @@ def main() -> int:
     known_spans: set[tuple[str, int, int]] = set()
     if not args.no_idcg_count:
         papers = {s.arxiv_id for q in scorable for s in spans_from_question(q)}
-        chunks_by_paper = rebuild_chunks(papers, cfg)
+        chunks_by_paper = ({p: chunk_set.get(p, []) for p in papers} if chunk_set is not None
+                           else rebuild_chunks(papers, cfg))
         for chunks in chunks_by_paper.values():
             for c in chunks:
                 known_spans.add((c.arxiv_id, c.char_start, c.char_end))
@@ -301,7 +360,8 @@ def main() -> int:
     removed_ids: set[str] = set()
     if mode in ("bm25", "hybrid"):
         print("Building BM25 index from the stored chunks...")
-        records = store.all_records()
+        records = ([r for recs in chunk_set.values() for r in recs] if chunk_set is not None
+                   else store.all_records())
         if args.min_prose_ratio is not None:
             kept, removed = filter_records(records, args.min_prose_ratio)
             removed_ids = {r.chunk_id for r in removed}
@@ -498,7 +558,7 @@ def main() -> int:
         # Only meaningful for the plain lexical arms on the original wording;
         # it printed a misleading line on the paraphrased runs.
         if (mode != "dense" and not reranker and not args.gold
-                and args.min_prose_ratio is None):
+                and args.min_prose_ratio is None and not args.chunks):
             print(f"\n  PRE-REGISTERED (sweep 2): lexical retrieval should recover")
             print(f"  f013, f015, m010, c002. Still missing: "
                   f"{', '.join(sorted(still)) if still else 'none'}"

@@ -57,6 +57,7 @@ import numpy as np
 import pandas as pd
 
 from rageval.config import TABLES_DIR
+from rageval.evaluation import decision
 from rageval.evaluation.spans import count_spans
 
 # --- pre-registered in docs/reranking-protocol.md; do not change -----------
@@ -85,11 +86,7 @@ def load_run(tag: str, tables_dir: Path) -> pd.DataFrame | None:
 
 def classify_primary(lo: float, hi: float, win_rate: float) -> str:
     """The protocol's four-way decision table."""
-    if hi < 0:
-        return "worse"
-    if lo > 0:
-        return "replaces" if win_rate >= WIN_THRESHOLD else "leaning"
-    return "not_separable"
+    return decision.classify(lo, hi, win_rate, WIN_THRESHOLD)
 
 
 def classify_secondary(lo: float, hi: float) -> str:
