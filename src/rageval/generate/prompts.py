@@ -46,13 +46,21 @@ Question: {question}
 Answer:"""
 
 
-def format_context(hits: list, max_chars_per_hit: int = 2000) -> str:
-    """Render retrieved chunks as numbered passages the model can cite."""
+def format_context(hits: list) -> str:
+    """Render retrieved chunks as numbered passages the model can cite.
+
+    Every passage is sent whole. A 2,000-character default cap used to sit
+    here, invisible to every config, and would have hidden part of 17 of
+    the 67 gold spans retrieved at k = 20. If a cap is ever needed it is a
+    declared config value that reports when it fires, not a default.
+    """
     blocks = []
     for i, h in enumerate(hits, 1):
+        # Whitespace collapse: measured at 0.9996 of raw characters over the
+        # 20k-budget context, in every chunk set (build log, Phase 3).
         body = " ".join(h.text.split())
-        if len(body) > max_chars_per_hit:
-            body = body[:max_chars_per_hit] + " ..."
+        # Cosmetic label truncation: the title is a display label only and
+        # touches no measured quantity.
         blocks.append(f"[{i}] ({h.arxiv_id} - {h.title[:70]})\n{body}")
     return "\n\n".join(blocks) if blocks else "(no passages retrieved)"
 
