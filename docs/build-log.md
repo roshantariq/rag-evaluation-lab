@@ -2323,6 +2323,32 @@ faithfulness score carries visible judge variance. It is a secondary
 measure and the paired design shares that noise across strategies, but a
 small faithfulness difference should not be read as a strategy effect.
 
+**Judge test-retest, measured** (owner-approved amendment `7bc6b31`,
+committed before it ran; `judge_retest_dryrun.csv`). Each of the 12
+judged dry-run answers judged once more, same text and contexts:
+
+| | |
+|---|---|
+| answers whose score changed | 5 of 12 |
+| mean \|Δ\| per answer | **0.083** |
+| max \|Δ\| | 0.429 (c001 `abstain_confidence`, 3/7 → 6/7) |
+| same statement split both times | 5 of 12 |
+| verdicts agreeing, where the split was identical | **22 of 22** |
+
+The judge's variance is in **how it splits an answer into statements**,
+not in its verdict on a given statement: whenever the two passes produced
+the same statements, every verdict matched. When the split differed, the
+score moved. The three largest changes were all `abstain_confidence`
+answers; at 12 answers that is not distinguishable from chance and is not
+read as a strategy effect. Rough, as declared. Per the amendment, a
+strategy difference in mean faithfulness below 0.083 will be described as
+within judge noise. That is conservative for a mean over dozens of answers,
+whose noise shrinks with their number, and it was fixed before any
+full-run score existed.
+
+Spend to date ≈ $0.97 (dry run, re-judge, retest, three determinism
+passes). Projected full run ≈ $5.8 more, ≈ $6.8 in total.
+
 **Blinding preserved.** Claude has read the four answerable dry-run
 questions' answers and judge statements (above) and has **not** read the
 text of the three u001 answers, which will reappear in the blind labelling
