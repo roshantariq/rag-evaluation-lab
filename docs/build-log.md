@@ -16,7 +16,9 @@ every step to 20 still adds evidence. The chunk-quality filter is null at
 0.3, 0.4 and 0.5: under BM25, low-prose chunks hold at most 2.2% of top-10
 slots. Section-aware, recursive and semantic chunkers, size-matched to
 fixed_512, are all not separable from it and all below it (−0.069 to
-−0.020); fixed_512 stays. Next: the end-of-phase replication.
+−0.020); fixed_512 stays. The end-of-phase replication finds chunk size
+null under BM25 as under dense (+0.030, interaction −0.010). **Phase 6 is
+complete.** Next: Phase 7, after its blocker (generation is dense-only).
 
 ---
 
@@ -2058,6 +2060,100 @@ in two, and that was invisible until a sweep compared chunkers that cut
 evidence differently. The bias was found and declared before the run only
 because the structural facts were measured first. Measure what the
 scoring rule rewards before comparing arms that differ in exactly that.
+
+### End-of-phase replication — chunk size under BM25: NULL, as under dense
+
+**What it closes.** Sweep 1 compared chunk sizes under dense retrieval.
+The pipeline then moved to BM25, whose length normalisation behaves
+nothing like an encoder truncating at 256 word pieces, so the null did
+not transfer automatically. This repeats `fixed_256` vs `fixed_512` under
+the pipeline Phase 6 selected. Protocol: `docs/replication-protocol.md`,
+committed with `25_replication_result.py` and its tests in `7efe707`,
+before either run.
+
+**Run.** BM25 on the existing `sweep_fixed256_minilm` collection
+(rebuilding `fixed_256` from the extraction reproduces its 5,816 chunk
+IDs exactly), and the same with the sweep 3 reranker as an exploratory
+arm. Both at `--k-max 100`; the deepest any budget column went was 47.
+
+*Found while checking:* sweep 1's dense `chunk256` table reaches exactly
+50 chunks at the 40k budget for 1 of 58 questions, so that one cell was
+depth-capped. The 20k column peaks at 27 and no decision used the 40k
+column. Recorded, not re-run.
+
+**Declared in advance:** the scoring bias found in the chunker sweep cuts
+the other way here. `fixed_256` cuts 80 of 101 gold spans against
+`fixed_512`'s 62, so any-overlap scoring favours the challenger.
+
+**Result** — span recall at the 20k budget, 58 questions, 101 spans:
+
+| | fixed_512 | fixed_256 | delta | 95% CI | Holm p | win rate | outcome |
+|---|---|---|---|---|---|---|---|
+| BM25 (decides) | 0.584 | 0.614 | +0.030 | [−0.043, +0.104] | 0.6072 | 77.1% | not separable |
+
+Selection stability: `fixed_256` selected in 77.1% of 4,000 half-splits,
+"leaning, not decisive"; optimism +0.020; 589 exact ties.
+
+**Decision: `fixed_512` stays the baseline chunk size.**
+
+**Reported, deciding nothing** (same questions, same bootstrap draws):
+
+| estimate | value | 95% CI |
+|---|---|---|
+| size effect under BM25 (256 − 512) | +0.030 | [−0.043, +0.104] |
+| size effect under dense (256 − 512), sweep 1's tables | +0.040 | [−0.040, +0.114] |
+| **interaction, BM25 minus dense** | **−0.010** | **[−0.108, +0.090]** |
+| exploratory: reranked BM25 (256 − 512) | −0.010 | [−0.077, +0.052] |
+
+The dense effect reproduces sweep 1 (quoted there as +0.039 from rounded
+recalls; it is 4 spans of 101). **Chunk size behaves the same under both
+retrievers as far as this gold set can tell**: a small positive lean for
+256 that is not separable, and an interaction estimate near zero. The
+interaction's interval is ±0.10 wide, so "no interaction" means "none
+large enough to see", not "none".
+
+Reranked, the size effect vanishes (−0.010). The reranker's candidate
+ceiling at 256 tokens is 0.802 against 0.881 at 512: its top 100 holds
+about half as much text, as the protocol warned. Exploratory only.
+
+**Predictions:**
+
+| prediction | outcome |
+|---|---|
+| 1. Not separable | **Confirmed** |
+| 2. Point estimate positive | **Confirmed**, +0.030 |
+| 3. Interaction CI includes zero | **Confirmed**, −0.010 [−0.108, +0.090] |
+| 4. `fixed_256` win rate between 50% and 90% | **Confirmed**, 77.1% (84.4% under dense) |
+
+**Phase 6 is complete.** The pipeline it selected:
+
+| axis | choice | how it was decided |
+|---|---|---|
+| retrieval | BM25 | sweep 2, both halves of the switching rule; effect bounded by the authoring confound (paraphrase test) |
+| chunking | `fixed_512`, no overlap | sweep 1 (dense), the chunker sweep, this replication (BM25): no alternative separable |
+| fusion | none | sweep 2b, null |
+| reranking | none (exploratory) | sweep 3, null at the CI boundary |
+| chunk filter | none | filter ablation, null |
+| generation k | 20 | sweep 4, gains not exhausted |
+| embedding model | not swept | dropped: dense is not in the pipeline |
+
+**What went wrong.** Nothing in the runs. The depth-capped cell in sweep
+1's table is the only defect found, and it touched no decision.
+
+**Tables:** `retrieval_bm25_chunk256.csv`, `retrieval_rerank_chunk256.csv`,
+`paired_bm25_bm25_chunk256_B20000.csv`,
+`stability_bm25_bm25_chunk256_B20000.csv`, `replication_result.csv`.
+
+### Standing lesson — Phase 6
+
+**Most of this phase's results are nulls, and they are the most
+trustworthy part of it.** Seven comparisons ran under rules fixed in
+advance. Only one changed the pipeline (BM25), and the paraphrase test
+then showed most of that win came from how the gold set was written. A
+phase that "found" a better chunker, filter or fusion would have been
+reporting noise on 58 questions. The power limit set at the start (about
+8 points detectable) predicted this, and every protocol said so before
+its run.
 
 ---
 
