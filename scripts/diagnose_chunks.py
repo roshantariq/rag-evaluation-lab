@@ -8,24 +8,13 @@ compete for retrieval slots against prose that actually answers questions.
 from __future__ import annotations
 
 import json
-import re
 
 import pandas as pd
 import yaml
 
 from rageval.chunking.base import chunk_document, get_token_counter
+from rageval.chunking.quality import prose_ratio
 from rageval.config import CONFIG_DIR, INTERIM_DIR, TABLES_DIR
-
-WORDLIKE = re.compile(r"^[A-Za-z][A-Za-z'-]{2,}$")
-
-
-def prose_ratio(text: str) -> float:
-    """Share of tokens that are ordinary words, not numbers or symbols."""
-    tokens = text.split()
-    if not tokens:
-        return 0.0
-    hits = sum(1 for t in tokens if WORDLIKE.match(t.strip(".,;:()[]%")))
-    return hits / len(tokens)
 
 
 with open(CONFIG_DIR / "baseline.yaml", "r", encoding="utf-8") as fh:

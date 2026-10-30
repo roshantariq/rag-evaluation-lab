@@ -29,6 +29,14 @@ stage fetches `--rerank-depth` candidates, the cross-encoder reorders them,
 and the top `--k-max` are scored by the same path as every other arm. The
 first stage's span recall within that depth is printed as the reranker's
 ceiling, and per-question timings are written for the latency report.
+
+`--min-prose-ratio <t>` drops chunks whose prose ratio is below t from the
+lexical index before BM25 is built (bm25 mode only; the dense store cannot
+be filtered without a rebuild). Removed chunks that held gold evidence
+still count as relevant, so a filter that deletes evidence is charged for
+it. An unfiltered BM25 is built alongside, and each question records how
+many of its unfiltered top 10 the filter removed: the slots the filter
+could free.
 """
 
 from __future__ import annotations
@@ -45,6 +53,7 @@ import pandas as pd
 import yaml
 
 from rageval.chunking.base import chunk_document
+from rageval.chunking.quality import filter_records
 from rageval.config import (
     CHROMA_DIR,
     CONFIG_DIR,
@@ -188,6 +197,9 @@ def main() -> int:
                         help="Score only the first N scorable questions. For "
                              "exercising options before a real run; the "
                              "output is not a result.")
+    parser.add_argument("--min-prose-ratio", type=float, default=None,
+                        help="Drop chunks below this prose ratio from the BM25 "
+                             "index (bm25 mode only). See rageval/chunking/quality.py.")
     args = parser.parse_args()
 
     if args.rerank:
@@ -212,6 +224,10 @@ def main() -> int:
     mode = args.retriever or cfg.get("retrieval", {}).get("mode", "dense")
     if mode not in MODES:
         print(f"Unknown retrieval mode {mode!r}; expected one of {MODES}.")
+        return 1
+    if args.min_prose_ratio is not None and mode != "bm25":
+        print(f"--min-prose-ratio filters the lexical index only; mode is {mode!r}. "
+              f"Filtering the dense store would need an index rebuild.")
         return 1
 
     gold_path = Path(args.gold) if args.gold else (EVAL_DIR / "gold_questions.jsonl")
@@ -281,10 +297,20 @@ def main() -> int:
     if mode in ("dense", "hybrid"):
         encoder = Encoder(cfg["embedding"]["model"], cache_path=EMBED_CACHE)
 
-    bm25 = None
+    bm25 = unfiltered = None
+    removed_ids: set[str] = set()
     if mode in ("bm25", "hybrid"):
         print("Building BM25 index from the stored chunks...")
-        bm25 = BM25Retriever(store.all_records())
+        records = store.all_records()
+        if args.min_prose_ratio is not None:
+            kept, removed = filter_records(records, args.min_prose_ratio)
+            removed_ids = {r.chunk_id for r in removed}
+            print(f"  prose filter < {args.min_prose_ratio}: removed {len(removed)} of "
+                  f"{len(records)} chunks ({len(removed) / len(records):.1%}) from "
+                  f"{len({r.arxiv_id for r in removed})} papers")
+            unfiltered = BM25Retriever(records)
+            records = kept
+        bm25 = BM25Retriever(records)
         print(f"  {len(bm25)} chunks indexed lexically\n")
 
     prov_total: dict[str, int] = defaultdict(int)
@@ -334,6 +360,9 @@ def main() -> int:
             timing = {"first_stage_s": t1 - t0,
                       "rerank_s": time.perf_counter() - t1,
                       "candidate_spans": ";".join(str(i) for i in sorted(found))}
+        if unfiltered is not None:
+            timing["low_prose_top10"] = sum(h.chunk_id in removed_ids
+                                            for h in unfiltered.query(q.question, k=10))
         retrieved = [Retrieved(h.arxiv_id, h.char_start, h.char_end, h.score) for h in hits]
         if known_spans:
             for h in retrieved:
@@ -419,6 +448,15 @@ def main() -> int:
         print(f"    rerank            {rr[len(rr) // 2]:.3f}s / {rr[-1]:.3f}s")
         print("  The first question's rerank time includes model warm-up.")
 
+    # --- what the prose filter could free -----------------------------------
+    if unfiltered is not None:
+        slots = [r["low_prose_top10"] for r in rows if "low_prose_top10" in r]
+        print(f"\n{'-' * 74}\nPROSE FILTER < {args.min_prose_ratio}\n{'-' * 74}")
+        print(f"  unfiltered top-10 slots held by removed chunks: {sum(slots)} of "
+              f"{10 * len(slots)}, in {sum(1 for s in slots if s)} of {len(slots)} questions")
+        print("  These are the only slots the filter can hand to other chunks. Zero")
+        print("  means it cannot change the top 10, whatever the threshold.")
+
     # --- which half of the chain was found ---------------------------------
     for qtype in ("multi_hop", "comparative"):
         if not any(r.get("question_type") == qtype and r.get("n_evidence") == 2
@@ -459,7 +497,8 @@ def main() -> int:
         still = predicted & {r["id"] for r in misses}
         # Only meaningful for the plain lexical arms on the original wording;
         # it printed a misleading line on the paraphrased runs.
-        if mode != "dense" and not reranker and not args.gold:
+        if (mode != "dense" and not reranker and not args.gold
+                and args.min_prose_ratio is None):
             print(f"\n  PRE-REGISTERED (sweep 2): lexical retrieval should recover")
             print(f"  f013, f015, m010, c002. Still missing: "
                   f"{', '.join(sorted(still)) if still else 'none'}"
