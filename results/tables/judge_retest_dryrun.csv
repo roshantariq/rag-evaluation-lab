@@ -1,0 +1,13 @@
+id,strategy,first,second,abs_diff,n_first,n_second,same_statements,verdicts_agree,judge_served_model
+a001,naive,1.0,1.0,0.0,2,2,False,,gpt-4o-2024-08-06
+a001,abstain,1.0,1.0,0.0,2,2,True,2,gpt-4o-2024-08-06
+a001,abstain_confidence,1.0,1.0,0.0,2,2,True,2,gpt-4o-2024-08-06
+c001,naive,1.0,1.0,0.0,7,7,True,7,gpt-4o-2024-08-06
+c001,abstain,1.0,0.8333333333333334,0.16666666666666663,6,6,False,,gpt-4o-2024-08-06
+c001,abstain_confidence,0.42857142857142855,0.8571428571428571,0.42857142857142855,7,7,False,,gpt-4o-2024-08-06
+f001,naive,0.8571428571428571,0.8571428571428571,0.0,7,7,True,7,gpt-4o-2024-08-06
+f001,abstain,1.0,1.0,0.0,4,4,True,4,gpt-4o-2024-08-06
+f001,abstain_confidence,0.75,1.0,0.25,8,8,False,,gpt-4o-2024-08-06
+m001,naive,0.8571428571428571,0.8888888888888888,0.031746031746031744,7,9,False,,gpt-4o-2024-08-06
+m001,abstain,0.75,0.75,0.0,8,8,False,,gpt-4o-2024-08-06
+m001,abstain_confidence,0.625,0.75,0.125,8,8,False,,gpt-4o-2024-08-06
