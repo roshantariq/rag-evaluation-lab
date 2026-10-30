@@ -16,9 +16,12 @@
 # retrieval.mode is read only by 10_eval_retrieval.py. 04_search.py,
 # 05_ask.py and RAGPipeline are dense-only and ignore it.
 #
-# retrieval.k is 5 for generation only; the harness scores every k up to
-# --k-max. Generation needs k>5 (Phase 5: zero of 32 two-span questions had
-# both spans retrieved at k=5). Sweep 4 decides the value.
+# retrieval.k is for generation only; the harness scores every k up to
+# --k-max. Set to 20 by sweep 4 (docs/k-sweep-protocol.md): every step on
+# the ladder 1->3->5->10->20 added evidence detectably under BM25, the last
+# +0.059 [+0.020, +0.106], so 20 is the top of the ladder, not a plateau.
+# It was 5 as a placeholder; Phase 5 found zero of 33 two-span questions
+# with both spans retrieved at k=5 under dense retrieval.
 chunking:
   strategy: fixed_512
   target_tokens: 512
@@ -32,7 +35,7 @@ index:
 
 retrieval:
   mode: bm25              # dense | bm25 | hybrid  (was dense until sweep 2)
-  k: 5                    # generation needs k>5; sweep 4 decides
+  k: 20                   # generation context; chosen by sweep 4
 
 generation:
   provider: openai          # or "azure"
