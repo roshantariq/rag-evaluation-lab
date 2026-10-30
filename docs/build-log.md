@@ -1770,6 +1770,21 @@ the same overlaps, the grouping and bootstrap are the code's own, and the
 output matches the log. A local re-run of `17` against the index would
 confirm the overlaps themselves.
 
+*Confirmed 30 October 2026.* `17` was re-run locally against the index at
+`--k 10` and at the 20k budget while checking the `_count_spans` hoist
+(below). Every hit count and group statistic matched the committed tables
+exactly. The per-question overlaps differed by at most 3e-16, which is
+floating-point summation order. The caveat is closed.
+
+**`_count_spans` hoisted into `rageval.evaluation.spans`.** Six private
+copies (13, 15, 16, 17, 19, 20) are replaced by `count_spans` and
+`span_indices`, with their own tests, including a real CSV round trip
+through float inference. Before the swap, all six copies were checked
+against the new functions on every `hit_spans` cell in every committed
+table: 7,992 cells, no disagreement. After it, scripts 15, 16, 17, 19 and
+20 were re-run and their tables came out identical to the committed ones.
+A fix to this guard now lands everywhere at once.
+
 ---
 
 ## Open items

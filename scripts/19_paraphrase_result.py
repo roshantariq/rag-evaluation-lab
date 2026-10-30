@@ -76,6 +76,7 @@ import numpy as np
 import pandas as pd
 
 from rageval.config import EVAL_DIR, TABLES_DIR
+from rageval.evaluation.spans import count_spans
 
 # --- pre-registered in docs/paraphrase-protocol.md; do not change ----------
 MIN_OVERLAP_DROP = 0.25      # manipulation check
@@ -88,34 +89,6 @@ SEED = 20260827
 EPS = 1e-9
 METRICS = (("B20000", "hit_spans@B20000", "budget 20,000"),
            ("k20", "hit_spans@20", "k=20"))
-
-
-def _count_spans(cell) -> int:
-    """Count span indices in a hit_spans cell, surviving pandas dtype guessing.
-
-    A column holding only "0" and blanks is inferred as float64, so "0" comes
-    back as 0.0 and a bare isdigit() counts nothing. Same guard as 13, 15,
-    16 and 17 - this is the fifth copy, and the case for hoisting it into
-    rageval only gets stronger.
-    """
-    if cell is None:
-        return 0
-    try:
-        if pd.isna(cell):
-            return 0
-    except (TypeError, ValueError):
-        pass
-    s = str(cell).strip()
-    if not s or s.lower() == "nan":
-        return 0
-    n = 0
-    for part in s.split(";"):
-        part = part.strip()
-        if part.endswith(".0"):
-            part = part[:-2]
-        if part.isdigit():
-            n += 1
-    return n
 
 
 def load_run(tag: str, tables_dir: Path) -> pd.DataFrame | None:
@@ -287,8 +260,8 @@ def main() -> int:
     drift = []
     for _, col, label in METRICS:
         for arm in ("dense", "bm25"):
-            a = [_count_spans(c) for c in runs[f"orig_{arm}"].loc[untouched, col]]
-            b = [_count_spans(c) for c in runs[f"para_{arm}"].loc[untouched, col]]
+            a = [count_spans(c) for c in runs[f"orig_{arm}"].loc[untouched, col]]
+            b = [count_spans(c) for c in runs[f"para_{arm}"].loc[untouched, col]]
             diff = [q for q, x, y in zip(untouched, a, b) if x != y]
             if diff:
                 drift.append(f"{arm} at {label}: {len(diff)} untouched question(s) "
@@ -333,7 +306,7 @@ def main() -> int:
 
     rows, qrows = [], {q: {"id": q} for q in rewritten}
     for suffix, col, label in METRICS:
-        hits = {k: np.array([_count_spans(c) for c in runs[k].loc[rewritten, col]])
+        hits = {k: np.array([count_spans(c) for c in runs[k].loc[rewritten, col]])
                 for k in runs}
         for k, v in hits.items():
             for q, h in zip(rewritten, v):

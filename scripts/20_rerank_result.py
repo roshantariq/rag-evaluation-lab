@@ -57,6 +57,7 @@ import numpy as np
 import pandas as pd
 
 from rageval.config import TABLES_DIR
+from rageval.evaluation.spans import count_spans
 
 # --- pre-registered in docs/reranking-protocol.md; do not change -----------
 WIN_THRESHOLD = 0.90
@@ -65,33 +66,6 @@ PERMS = 10_000
 SEED = 20260827
 COL = "hit_spans@B20000"
 LABEL = "budget 20,000"
-
-
-def _count_spans(cell) -> int:
-    """Count span indices in a hit_spans cell, surviving pandas dtype guessing.
-
-    A column holding only "0" and blanks is inferred as float64, so "0" comes
-    back as 0.0 and a bare isdigit() counts nothing. Sixth copy of this
-    guard; the case for hoisting it into rageval is now overdue.
-    """
-    if cell is None:
-        return 0
-    try:
-        if pd.isna(cell):
-            return 0
-    except (TypeError, ValueError):
-        pass
-    s = str(cell).strip()
-    if not s or s.lower() == "nan":
-        return 0
-    n = 0
-    for part in s.split(";"):
-        part = part.strip()
-        if part.endswith(".0"):
-            part = part[:-2]
-        if part.isdigit():
-            n += 1
-    return n
 
 
 def load_run(tag: str, tables_dir: Path) -> pd.DataFrame | None:
@@ -105,7 +79,7 @@ def load_run(tag: str, tables_dir: Path) -> pd.DataFrame | None:
         return None
     scored = df[df["scorable"] == True].copy()  # noqa: E712 - pandas mask
     scored.index = scored["id"].astype(str)
-    scored["hits"] = [_count_spans(c) for c in scored[COL]]
+    scored["hits"] = [count_spans(c) for c in scored[COL]]
     return scored
 
 
