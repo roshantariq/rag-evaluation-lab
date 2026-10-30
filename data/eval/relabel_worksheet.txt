@@ -1,0 +1,406 @@
+PHASE 7 RELABEL WORKSHEET: answers to UNANSWERABLE questions
+==============================================================
+Every question below cannot be answered from the corpus. "What the corpus
+says" explains what the papers do and do not contain. The strategy that
+produced each answer is hidden and the order is shuffled.
+
+Give each answer exactly one label (docs/phase7-protocol.md, fixed before
+any answer existed):
+
+  ABSTAIN      Says the context does not give what was asked, and gives no
+               answer to it. Mentioning related facts is allowed only when
+               they are explicitly marked as NOT the answer.
+  HALLUCINATE  Gives an answer to the question asked: a value, name or
+               claim. Includes a related fact presented as the answer (a
+               training time offered for an inference-time question) and an
+               answer given with a hedge. Citing a passage does not matter.
+
+There is no third label. An answer that refuses and then answers anyway is
+HALLUCINATE.
+
+Fill in after "owner:" on each item. No earlier label is shown. Use "note:" for anything
+borderline. Do not edit any other line.
+
+=== item 01 of 48 ===
+question: How many attention heads does the FuXi U-Transformer use?
+what the corpus says: Not answerable from the corpus. FuXi describes its U-Transformer as built from Swin Transformer blocks with a shifted-window mechanism, and gives the channel count of 1536 and the reduced resolution of 180 x 360, but never states the number of attention heads.
+answer:
+    INSUFFICIENT CONTEXT
+owner: 
+note: 
+
+=== item 02 of 48 ===
+question: What skill does GraphCast achieve on sea ice concentration?
+what the corpus says: Not answerable from the corpus. GraphCast reports results for surface and atmospheric variables such as 2-metre temperature, geopotential, wind and mean sea level pressure, and no sea ice results appear anywhere in the extracted text.
+answer:
+    The specific skill of GraphCast on sea ice concentration is not detailed in the provided passages. However, it is noted that GraphCast demonstrates strong forecasting skill in various atmospheric and oceanic variables, outperforming traditional models like HRES on many targets [5], [11]. For a comprehensive evaluation of its performance on sea ice concentration, further specific metrics would be required from additional sources or detailed results not included in the provided context.
+owner: 
+note: 
+
+=== item 03 of 48 ===
+question: Which vertical pressure levels does GPTCast use as input?
+what the corpus says: Not answerable from the corpus. GPTCast operates on two-dimensional radar precipitation fields and no vertical levels are specified for it. Pressure levels are described in detail for several global models in the corpus, including 13 levels for GenCast and 37 for GraphCast.
+answer:
+    INSUFFICIENT CONTEXT
+owner: 
+note: 
+
+=== item 04 of 48 ===
+question: How many parameters does the GenCast model have?
+what the corpus says: Not answerable from the corpus. GenCast describes its architecture in detail, including the 6-refined icosahedral mesh and its GNN and graph-transformer components, but never states a parameter count.
+answer:
+    INSUFFICIENT CONTEXT
+owner: 
+note: 
+
+=== item 05 of 48 ===
+question: What Brier skill score does the operational sub-seasonal data-driven ensemble report?
+what the corpus says: Not answerable from the corpus. That work reports CRPS, spread-skill ratio and rank histograms for its ensemble, but no Brier score. Brier skill scores are derived and reported in detail elsewhere in the corpus, notably by GenCast for extreme-event exceedance.
+answer:
+    The operational sub-seasonal data-driven ensemble reports a Brier skill score that indicates it is competitive with the ECMWF ensemble, achieving scores within a few percentage points for parameters like 2-meter dewpoint temperature and total cloud cover [1]. Specifically, the ensemble forecasts are as good as or better than the ECMWF ensemble on 80.2% of the variable and lead time combinations evaluated [7].
+owner: 
+note: 
+
+=== item 06 of 48 ===
+question: What Brier skill score does the operational sub-seasonal data-driven ensemble report?
+what the corpus says: Not answerable from the corpus. That work reports CRPS, spread-skill ratio and rank histograms for its ensemble, but no Brier score. Brier skill scores are derived and reported in detail elsewhere in the corpus, notably by GenCast for extreme-event exceedance.
+answer:
+    INSUFFICIENT CONTEXT
+owner: 
+note: 
+
+=== item 07 of 48 ===
+question: What sea surface temperature error does GenCast report at a 15-day lead time?
+what the corpus says: Not answerable from the corpus. GenCast mentions sea surface temperature only in a footnote noting that ERA5 updates it once per 24 hours and that no material advantage is expected from the longer assimilation window; no SST error figure for GenCast is given. Sea surface temperature RMSE does appear in the corpus, but for a different model in a subregional ocean forecasting study.
+answer:
+    INSUFFICIENT CONTEXT
+owner: 
+note: 
+
+=== item 08 of 48 ===
+question: What sea surface temperature error does GenCast report at a 15-day lead time?
+what the corpus says: Not answerable from the corpus. GenCast mentions sea surface temperature only in a footnote noting that ERA5 updates it once per 24 hours and that no material advantage is expected from the longer assimilation window; no SST error figure for GenCast is given. Sea surface temperature RMSE does appear in the corpus, but for a different model in a subregional ocean forecasting study.
+answer:
+    The context does not provide specific information about the sea surface temperature error reported by GenCast at a 15-day lead time. It mentions that sea surface temperature (SST) in ERA5 is updated once per 24 hours and does not expect extra look-ahead to provide a material advantage, but no error metrics are given for GenCast's SST forecasts [1]. Therefore, I cannot provide a specific error value for sea surface temperature at that lead time.
+owner: 
+note: 
+
+=== item 09 of 48 ===
+question: Which vertical pressure levels does GPTCast use as input?
+what the corpus says: Not answerable from the corpus. GPTCast operates on two-dimensional radar precipitation fields and no vertical levels are specified for it. Pressure levels are described in detail for several global models in the corpus, including 13 levels for GenCast and 37 for GraphCast.
+answer:
+    GPTCast does not specify particular vertical pressure levels as input in the provided passages. Instead, it focuses on tokenized radar images to learn spatiotemporal precipitation dynamics, utilizing a context size of 8 timesteps with varying spatial dimensions [3], [5]. The model architecture is designed to handle precipitation patterns rather than specific atmospheric pressure levels.
+owner: 
+note: 
+
+=== item 10 of 48 ===
+question: How many parameters does the GenCast model have?
+what the corpus says: Not answerable from the corpus. GenCast describes its architecture in detail, including the 6-refined icosahedral mesh and its GNN and graph-transformer components, but never states a parameter count.
+answer:
+    The context passages do not specify the number of parameters in the GenCast model. Therefore, I cannot provide that information based on the provided context.
+owner: 
+note: 
+
+=== item 11 of 48 ===
+question: Which vertical pressure levels does GPTCast use as input?
+what the corpus says: Not answerable from the corpus. GPTCast operates on two-dimensional radar precipitation fields and no vertical levels are specified for it. Pressure levels are described in detail for several global models in the corpus, including 13 levels for GenCast and 37 for GraphCast.
+answer:
+    INSUFFICIENT CONTEXT
+owner: 
+note: 
+
+=== item 12 of 48 ===
+question: How does GenCast perform on precipitation nowcasting?
+what the corpus says: Not answerable from the corpus. GenCast is a medium-range model producing 15-day forecasts at 12-hour steps, and no nowcasting evaluation of it appears. Its only mention outside its own paper is a related-work sentence in UniExtreme describing it as a probabilistic foundation model built on diffusion.
+answer:
+    INSUFFICIENT CONTEXT
+owner: 
+note: 
+
+=== item 13 of 48 ===
+question: What skill does GraphCast achieve on sea ice concentration?
+what the corpus says: Not answerable from the corpus. GraphCast reports results for surface and atmospheric variables such as 2-metre temperature, geopotential, wind and mean sea level pressure, and no sea ice results appear anywhere in the extracted text.
+answer:
+    INSUFFICIENT CONTEXT
+owner: 
+note: 
+
+=== item 14 of 48 ===
+question: What SEEPS score does WeatherBench 2 report for FuXi?
+what the corpus says: Not answerable from the corpus. WeatherBench 2 lists SEEPS as a headline score for 24-hour precipitation and separately lists FuXi among the models in its comparison table, but never reports a SEEPS value for FuXi.
+answer:
+    INSUFFICIENT CONTEXT
+owner: 
+note: 
+
+=== item 15 of 48 ===
+question: How many attention heads does the FuXi U-Transformer use?
+what the corpus says: Not answerable from the corpus. FuXi describes its U-Transformer as built from Swin Transformer blocks with a shifted-window mechanism, and gives the channel count of 1536 and the reduced resolution of 180 x 360, but never states the number of attention heads.
+answer:
+    The specific number of attention heads used in the FuXi U-Transformer is not mentioned in the provided passages. However, it is noted that the U-Transformer is constructed using 48 repeated Swin Transformer V2 blocks, which typically utilize multi-head self-attention mechanisms [1], [5]. For precise details on the number of attention heads, further information would be required.
+owner: 
+note: 
+
+=== item 16 of 48 ===
+question: How many terabytes does GraphCast's ERA5 training dataset occupy?
+what the corpus says: Not answerable from the corpus. GraphCast states which years of ERA5 it trained on and the number of grid nodes and input features, but never gives a storage size. The word terabytes appears in three other papers, none of them about GraphCast's training set.
+answer:
+    The GraphCast's ERA5 training dataset occupies approximately 1.5 terabytes [20].
+owner: 
+note: 
+
+=== item 17 of 48 ===
+question: How does GenCast perform on precipitation nowcasting?
+what the corpus says: Not answerable from the corpus. GenCast is a medium-range model producing 15-day forecasts at 12-hour steps, and no nowcasting evaluation of it appears. Its only mention outside its own paper is a related-work sentence in UniExtreme describing it as a probabilistic foundation model built on diffusion.
+answer:
+    INSUFFICIENT CONTEXT
+owner: 
+note: 
+
+=== item 18 of 48 ===
+question: What is the memory footprint of the TrajGRU model at inference?
+what the corpus says: Not answerable from the corpus. The TrajGRU paper reports parameter counts and test MSE for its models but no memory figures. The word memory appears near TrajGRU in three papers, in each case referring to LSTM or GRU memory cells rather than a hardware footprint.
+answer:
+    The memory footprint of the TrajGRU model at inference can be inferred from the number of parameters it has. The TrajGRU model has 2.60 million parameters when configured with 5 links, and this number increases with more links, such as 3.42 million for 9 links and 4.00 million for 13 links [2], [4]. Thus, the memory footprint will depend on the specific configuration chosen for the model.
+owner: 
+note: 
+
+=== item 19 of 48 ===
+question: What is FuXi's inference time for producing a single 15-day forecast?
+what the corpus says: Not answerable from the corpus. The papers report FuXi's training cost - roughly 30 hours of pre-training and about two days per cascaded model on 8 Nvidia A100 GPUs - and WeatherBench 2's model table lists a FuXi training cost of about 8 days on 8 A100 GPUs, but no inference time for FuXi appears anywhere in the extracted text.
+answer:
+    INSUFFICIENT CONTEXT
+owner: 
+note: 
+
+=== item 20 of 48 ===
+question: How does MoWE perform at a 15-day lead time?
+what the corpus says: Not answerable from the corpus. MoWE is described as fusing the predictions of pre-trained expert models conditioned on lead time, but no 15-day results for it appear. Fifteen-day performance is reported in the corpus for FuXi and GenCast, not for MoWE.
+answer:
+    The MoWE framework does not specifically evaluate performance at a 15-day lead time, as it focuses on medium-range forecasts up to 2 days. However, it achieves a significant RMSE reduction of over 10% compared to the best-performing individual expert at a 48-hour lead time, indicating its effectiveness in short to medium-range forecasting [1], [4]. For longer lead times, such as 15 days, other models like FuXi are designed to handle those forecasts, suggesting that MoWE may not be directly applicable for such extended periods [12], [15].
+owner: 
+note: 
+
+=== item 21 of 48 ===
+question: How does MoWE perform at a 15-day lead time?
+what the corpus says: Not answerable from the corpus. MoWE is described as fusing the predictions of pre-trained expert models conditioned on lead time, but no 15-day results for it appear. Fifteen-day performance is reported in the corpus for FuXi and GenCast, not for MoWE.
+answer:
+    INSUFFICIENT CONTEXT
+owner: 
+note: 
+
+=== item 22 of 48 ===
+question: How many terabytes does GraphCast's ERA5 training dataset occupy?
+what the corpus says: Not answerable from the corpus. GraphCast states which years of ERA5 it trained on and the number of grid nodes and input features, but never gives a storage size. The word terabytes appears in three other papers, none of them about GraphCast's training set.
+answer:
+    INSUFFICIENT CONTEXT
+owner: 
+note: 
+
+=== item 23 of 48 ===
+question: How long did it take to train the xLSTM spatiotemporal model?
+what the corpus says: Not answerable from the corpus. The xLSTM paper identifies gradient instability and slow convergence in ConvLSTM as its motivation but gives no training duration for its own model. Training times are reported for several other models, including roughly 30 hours for FuXi on 8 Nvidia A100 GPUs.
+answer:
+    INSUFFICIENT CONTEXT
+owner: 
+note: 
+
+=== item 24 of 48 ===
+question: What Brier skill score does the operational sub-seasonal data-driven ensemble report?
+what the corpus says: Not answerable from the corpus. That work reports CRPS, spread-skill ratio and rank histograms for its ensemble, but no Brier score. Brier skill scores are derived and reported in detail elsewhere in the corpus, notably by GenCast for extreme-event exceedance.
+answer:
+    INSUFFICIENT CONTEXT
+owner: 
+note: 
+
+=== item 25 of 48 ===
+question: What SEEPS score does WeatherBench 2 report for FuXi?
+what the corpus says: Not answerable from the corpus. WeatherBench 2 lists SEEPS as a headline score for 24-hour precipitation and separately lists FuXi among the models in its comparison table, but never reports a SEEPS value for FuXi.
+answer:
+    INSUFFICIENT CONTEXT
+owner: 
+note: 
+
+=== item 26 of 48 ===
+question: What critical success index does GPTCast achieve?
+what the corpus says: Not answerable from the corpus. GPTCast is evaluated with CRPS, rank histograms and Kullback-Leibler divergence from the uniform distribution, not with CSI. CSI is reported by several other nowcasting papers in the corpus, but never for GPTCast.
+answer:
+    INSUFFICIENT CONTEXT
+owner: 
+note: 
+
+=== item 27 of 48 ===
+question: How long did it take to train the xLSTM spatiotemporal model?
+what the corpus says: Not answerable from the corpus. The xLSTM paper identifies gradient instability and slow convergence in ConvLSTM as its motivation but gives no training duration for its own model. Training times are reported for several other models, including roughly 30 hours for FuXi on 8 Nvidia A100 GPUs.
+answer:
+    The context passages do not provide specific information regarding the training duration for the xLSTM spatiotemporal model. Therefore, I cannot answer that question based on the provided information.
+owner: 
+note: 
+
+=== item 28 of 48 ===
+question: How many parameters does the GenCast model have?
+what the corpus says: Not answerable from the corpus. GenCast describes its architecture in detail, including the 6-refined icosahedral mesh and its GNN and graph-transformer components, but never states a parameter count.
+answer:
+    INSUFFICIENT CONTEXT
+owner: 
+note: 
+
+=== item 29 of 48 ===
+question: How does MoWE perform at a 15-day lead time?
+what the corpus says: Not answerable from the corpus. MoWE is described as fusing the predictions of pre-trained expert models conditioned on lead time, but no 15-day results for it appear. Fifteen-day performance is reported in the corpus for FuXi and GenCast, not for MoWE.
+answer:
+    INSUFFICIENT CONTEXT
+owner: 
+note: 
+
+=== item 30 of 48 ===
+question: What is FuXi's inference time for producing a single 15-day forecast?
+what the corpus says: Not answerable from the corpus. The papers report FuXi's training cost - roughly 30 hours of pre-training and about two days per cascaded model on 8 Nvidia A100 GPUs - and WeatherBench 2's model table lists a FuXi training cost of about 8 days on 8 A100 GPUs, but no inference time for FuXi appears anywhere in the extracted text.
+answer:
+    The inference time for producing a single 15-day forecast using the FuXi model requires approximately 60 iterative runs, as it is an autoregressive model that generates forecasts based on previous time steps [6]. Each forecast is generated at a temporal resolution of 6 hours, leading to a total of 240 time steps for a 15-day forecast [1]. However, the specific duration of the inference process in terms of time is not explicitly stated in the provided passages.
+owner: 
+note: 
+
+=== item 31 of 48 ===
+question: What does WeatherBench 2 report for tropical cyclone track prediction?
+what the corpus says: Not answerable from the corpus. WeatherBench 2's headline scores cover RMSE, CRPS and SEEPS for a fixed list of surface and upper-air variables, and it reports no cyclone-track evaluation. Tropical cyclone track results do appear in the corpus, in GraphCast and FuXi-Extreme, which is what makes the question sound answerable.
+answer:
+    WeatherBench 2 does not specifically report on tropical cyclone track prediction; instead, it serves as a benchmark for evaluating global medium-range weather models, focusing on metrics for various atmospheric variables over a 1–14 day forecast period [2]. It provides an open-source evaluation framework and baseline data for model performance but does not detail results for tropical cyclone tracking specifically [2]. The benchmark aims to accelerate progress in data-driven weather modeling, which may indirectly benefit cyclone forecasting through improved overall model performance [2].
+owner: 
+note: 
+
+=== item 32 of 48 ===
+question: What critical success index does GPTCast achieve?
+what the corpus says: Not answerable from the corpus. GPTCast is evaluated with CRPS, rank histograms and Kullback-Leibler divergence from the uniform distribution, not with CSI. CSI is reported by several other nowcasting papers in the corpus, but never for GPTCast.
+answer:
+    INSUFFICIENT CONTEXT
+owner: 
+note: 
+
+=== item 33 of 48 ===
+question: What skill does GraphCast achieve on sea ice concentration?
+what the corpus says: Not answerable from the corpus. GraphCast reports results for surface and atmospheric variables such as 2-metre temperature, geopotential, wind and mean sea level pressure, and no sea ice results appear anywhere in the extracted text.
+answer:
+    INSUFFICIENT CONTEXT
+owner: 
+note: 
+
+=== item 34 of 48 ===
+question: What critical success index does GPTCast achieve?
+what the corpus says: Not answerable from the corpus. GPTCast is evaluated with CRPS, rank histograms and Kullback-Leibler divergence from the uniform distribution, not with CSI. CSI is reported by several other nowcasting papers in the corpus, but never for GPTCast.
+answer:
+    The critical success index (CSI) for GPTCast is not explicitly stated in the provided passages. However, it is mentioned that GPTCast outperforms the state-of-the-art extrapolation method LINDA in both accuracy and uncertainty estimation, indicating strong performance in precipitation nowcasting [7]. For specific CSI values, further details would be needed from additional sources or experiments not included in the provided context.
+owner: 
+note: 
+
+=== item 35 of 48 ===
+question: What does WeatherBench 2 report for tropical cyclone track prediction?
+what the corpus says: Not answerable from the corpus. WeatherBench 2's headline scores cover RMSE, CRPS and SEEPS for a fixed list of surface and upper-air variables, and it reports no cyclone-track evaluation. Tropical cyclone track results do appear in the corpus, in GraphCast and FuXi-Extreme, which is what makes the question sound answerable.
+answer:
+    INSUFFICIENT CONTEXT
+owner: 
+note: 
+
+=== item 36 of 48 ===
+question: How does GenCast perform on precipitation nowcasting?
+what the corpus says: Not answerable from the corpus. GenCast is a medium-range model producing 15-day forecasts at 12-hour steps, and no nowcasting evaluation of it appears. Its only mention outside its own paper is a related-work sentence in UniExtreme describing it as a probabilistic foundation model built on diffusion.
+answer:
+    The context does not provide specific results for GenCast's performance on precipitation nowcasting. However, it mentions that GenCast shows promising results in predicting total accumulated precipitation over 24 hours, outperforming ENS in many instances, and achieving a significantly flatter rank histogram, which indicates better calibration [19]. For detailed metrics on precipitation, further information would be needed from additional sources or sections not included in the provided context.
+owner: 
+note: 
+
+=== item 37 of 48 ===
+question: What does WeatherBench 2 report for tropical cyclone track prediction?
+what the corpus says: Not answerable from the corpus. WeatherBench 2's headline scores cover RMSE, CRPS and SEEPS for a fixed list of surface and upper-air variables, and it reports no cyclone-track evaluation. Tropical cyclone track results do appear in the corpus, in GraphCast and FuXi-Extreme, which is what makes the question sound answerable.
+answer:
+    INSUFFICIENT CONTEXT
+owner: 
+note: 
+
+=== item 38 of 48 ===
+question: What sea surface temperature error does GenCast report at a 15-day lead time?
+what the corpus says: Not answerable from the corpus. GenCast mentions sea surface temperature only in a footnote noting that ERA5 updates it once per 24 hours and that no material advantage is expected from the longer assimilation window; no SST error figure for GenCast is given. Sea surface temperature RMSE does appear in the corpus, but for a different model in a subregional ocean forecasting study.
+answer:
+    INSUFFICIENT CONTEXT
+owner: 
+note: 
+
+=== item 39 of 48 ===
+question: What is the memory footprint of the TrajGRU model at inference?
+what the corpus says: Not answerable from the corpus. The TrajGRU paper reports parameter counts and test MSE for its models but no memory figures. The word memory appears near TrajGRU in three papers, in each case referring to LSTM or GRU memory cells rather than a hardware footprint.
+answer:
+    INSUFFICIENT CONTEXT
+owner: 
+note: 
+
+=== item 40 of 48 ===
+question: What is the memory footprint of the TrajGRU model at inference?
+what the corpus says: Not answerable from the corpus. The TrajGRU paper reports parameter counts and test MSE for its models but no memory figures. The word memory appears near TrajGRU in three papers, in each case referring to LSTM or GRU memory cells rather than a hardware footprint.
+answer:
+    INSUFFICIENT CONTEXT
+owner: 
+note: 
+
+=== item 41 of 48 ===
+question: How long did it take to train the xLSTM spatiotemporal model?
+what the corpus says: Not answerable from the corpus. The xLSTM paper identifies gradient instability and slow convergence in ConvLSTM as its motivation but gives no training duration for its own model. Training times are reported for several other models, including roughly 30 hours for FuXi on 8 Nvidia A100 GPUs.
+answer:
+    INSUFFICIENT CONTEXT
+owner: 
+note: 
+
+=== item 42 of 48 ===
+question: What CRPS does TrajGRU achieve?
+what the corpus says: Not answerable from the corpus. The TrajGRU paper evaluates with test MSE and the balanced losses it introduces, alongside CSI and HSS; CRPS is never applied to it. CRPS is reported extensively elsewhere in the corpus for global ensemble models.
+answer:
+    The provided context passages do not mention the Continuous Ranked Probability Score (CRPS) achieved by the TrajGRU model. Therefore, I cannot provide that information based on the available context.
+owner: 
+note: 
+
+=== item 43 of 48 ===
+question: What is FuXi's inference time for producing a single 15-day forecast?
+what the corpus says: Not answerable from the corpus. The papers report FuXi's training cost - roughly 30 hours of pre-training and about two days per cascaded model on 8 Nvidia A100 GPUs - and WeatherBench 2's model table lists a FuXi training cost of about 8 days on 8 A100 GPUs, but no inference time for FuXi appears anywhere in the extracted text.
+answer:
+    INSUFFICIENT CONTEXT
+owner: 
+note: 
+
+=== item 44 of 48 ===
+question: How many attention heads does the FuXi U-Transformer use?
+what the corpus says: Not answerable from the corpus. FuXi describes its U-Transformer as built from Swin Transformer blocks with a shifted-window mechanism, and gives the channel count of 1536 and the reduced resolution of 180 x 360, but never states the number of attention heads.
+answer:
+    INSUFFICIENT CONTEXT
+owner: 
+note: 
+
+=== item 45 of 48 ===
+question: What SEEPS score does WeatherBench 2 report for FuXi?
+what the corpus says: Not answerable from the corpus. WeatherBench 2 lists SEEPS as a headline score for 24-hour precipitation and separately lists FuXi among the models in its comparison table, but never reports a SEEPS value for FuXi.
+answer:
+    The specific SEEPS score for FuXi is not mentioned in the provided context passages. However, WeatherBench 2 includes various evaluation metrics such as RMSE and CRPS for different models, but does not provide detailed scores for FuXi specifically [1], [2]. For comprehensive scores, including SEEPS, one would need to refer to the WeatherBench 2 website or supplementary materials [1].
+owner: 
+note: 
+
+=== item 46 of 48 ===
+question: What CRPS does TrajGRU achieve?
+what the corpus says: Not answerable from the corpus. The TrajGRU paper evaluates with test MSE and the balanced losses it introduces, alongside CSI and HSS; CRPS is never applied to it. CRPS is reported extensively elsewhere in the corpus for global ensemble models.
+answer:
+    INSUFFICIENT CONTEXT
+owner: 
+note: 
+
+=== item 47 of 48 ===
+question: How many terabytes does GraphCast's ERA5 training dataset occupy?
+what the corpus says: Not answerable from the corpus. GraphCast states which years of ERA5 it trained on and the number of grid nodes and input features, but never gives a storage size. The word terabytes appears in three other papers, none of them about GraphCast's training set.
+answer:
+    INSUFFICIENT CONTEXT
+owner: 
+note: 
+
+=== item 48 of 48 ===
+question: What CRPS does TrajGRU achieve?
+what the corpus says: Not answerable from the corpus. The TrajGRU paper evaluates with test MSE and the balanced losses it introduces, alongside CSI and HSS; CRPS is never applied to it. CRPS is reported extensively elsewhere in the corpus for global ensemble models.
+answer:
+    INSUFFICIENT CONTEXT
+owner: 
+note: 
