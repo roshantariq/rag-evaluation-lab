@@ -50,6 +50,7 @@ import pandas as pd
 from rageval.config import TABLES_DIR
 from rageval.evaluation.spans import span_indices
 from rageval.evaluation.stats import binom_two_sided, holm
+from rageval.provenance import record
 
 # --- pre-registered in docs/phase7-protocol.md; do not change --------------
 STRATEGIES = ("naive", "abstain", "abstain_confidence")
@@ -267,6 +268,7 @@ def main() -> int:
     out = tables / "generation_result.csv"
     out.unlink(missing_ok=True)
     pd.DataFrame(rows).to_csv(out, index=False, encoding="utf-8")
+    record([out])
     print(f"\nOUTCOME: {outcome}\nwrote {out}")
     return 0
 

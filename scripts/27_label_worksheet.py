@@ -43,6 +43,7 @@ import pandas as pd
 from rageval.config import EVAL_DIR, TABLES_DIR
 from rageval.evaluation.faithfulness import strip_confidence
 from rageval.evaluation.gold import load_gold
+from rageval.provenance import record
 
 # --- fixed by docs/phase7-protocol.md; do not change -----------------------
 SHUFFLE_SEED = 20260827
@@ -223,6 +224,7 @@ def read() -> int:
         path = TABLES_DIR / name
         path.unlink(missing_ok=True)
         df.to_csv(path, index=False, encoding="utf-8")
+        record([path])
         print(f"wrote {name}: {len(df)} items, owner and Claude disagree on "
               f"{int((~df['agree']).sum())}")
     return 0

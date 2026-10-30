@@ -92,6 +92,7 @@ from rageval.retrieve.fusion import (
 from rageval.retrieve.rerank import Reranker
 from rageval.store.chroma_store import ChromaStore
 from rageval.store.chroma_store import Retrieved as StoreRecord
+from rageval.provenance import record
 
 MODES = ("dense", "bm25", "hybrid")
 FUSIONS = ("rrf", "interleave")
@@ -447,6 +448,7 @@ def main() -> int:
     else:
         out_path = args.out or (TABLES_DIR / f"retrieval_{args.tag}.csv")
     df.to_csv(out_path, index=False)
+    record([out_path], gold=[gold_path])
 
     # --- report ------------------------------------------------------------
     ks = DEFAULT_KS

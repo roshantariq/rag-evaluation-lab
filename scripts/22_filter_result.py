@@ -41,6 +41,7 @@ import pandas as pd
 
 from rageval.config import TABLES_DIR
 from rageval.evaluation import decision
+from rageval.provenance import record
 
 # --- pre-registered in docs/chunk-filter-protocol.md; do not change --------
 CONTROL = "bm25"
@@ -135,6 +136,7 @@ def main() -> int:
 
     pd.DataFrame(rows).assign(chosen=chosen, control_win_rate=control_win) \
         .to_csv(out_path, index=False)
+    record([out_path])
     print(f"\n  -> {out_path}\n")
     return 0
 

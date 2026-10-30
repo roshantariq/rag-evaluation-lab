@@ -43,6 +43,7 @@ from rageval.embed.encoder import Encoder
 from rageval.evaluation.gold import load_gold
 from rageval.evaluation.retrieval_metrics import Retrieved, is_scorable
 from rageval.store.chroma_store import ChromaStore
+from rageval.provenance import record
 
 
 def first_hit(hits, arxiv_id: str, start: int, end: int):
@@ -114,6 +115,7 @@ def main() -> int:
     out = pd.DataFrame(rows)
     out_path = TABLES_DIR / f"oracle_{args.tag}_k{args.k}.csv"
     out.to_csv(out_path, index=False)
+    record([out_path], gold=[EVAL_DIR / "gold_questions.jsonl"])
 
     k = args.k
     print(f"\n{'=' * 74}\nORACLE: query = the evidence text itself  "

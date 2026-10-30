@@ -46,6 +46,7 @@ import pandas as pd
 from rageval.config import TABLES_DIR
 from rageval.evaluation import decision
 from rageval.evaluation.spans import count_spans
+from rageval.provenance import record
 
 # --- pre-registered in docs/replication-protocol.md; do not change ---------
 CONTROL, ARM = "bm25", "bm25_chunk256"
@@ -155,6 +156,7 @@ def main() -> int:
         "rerank_effect": expl[0], "rerank_effect_lo": expl[1], "rerank_effect_hi": expl[2],
         "boot": BOOT, "seed": SEED,
     }]).to_csv(out_path, index=False)
+    record([out_path])
     print(f"\n  -> {out_path}\n")
     return 0
 

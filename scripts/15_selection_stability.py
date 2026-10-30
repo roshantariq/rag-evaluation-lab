@@ -66,6 +66,7 @@ import pandas as pd
 
 from rageval.config import TABLES_DIR
 from rageval.evaluation.spans import count_spans
+from rageval.provenance import record
 
 
 def load_run(tag: str, col: str, tables_dir: Path) -> pd.DataFrame | None:
@@ -337,6 +338,7 @@ def main() -> int:
     # in place reading as this run's result.
     out_path.unlink(missing_ok=True)
     pd.DataFrame(rows).to_csv(out_path, index=False)
+    record([out_path])
     print(f"  -> {out_path}\n")
 
     return 0

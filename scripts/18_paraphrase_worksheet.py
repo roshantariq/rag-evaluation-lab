@@ -61,6 +61,7 @@ import pandas as pd
 from rageval.config import CHROMA_DIR, EVAL_DIR, TABLES_DIR
 from rageval.retrieve.bm25 import tokenize
 from rageval.store.chroma_store import ChromaStore
+from rageval.provenance import record
 
 WORKSHEET = EVAL_DIR / "paraphrase_worksheet.txt"
 PARA_GOLD = EVAL_DIR / "gold_paraphrased.jsonl"
@@ -313,6 +314,7 @@ def build(args) -> int:
     df = pd.DataFrame(rows)
     out_csv = TABLES_DIR / "paraphrase_overlap.csv"
     df.to_csv(out_csv, index=False)
+    record([out_csv], gold=[EVAL_DIR / "gold_questions.jsonl"])
 
     para_by_id = {r["id"]: r["paraphrase"] for r in rows}
     with open(PARA_GOLD, "w", encoding="utf-8") as fh:

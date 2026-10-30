@@ -52,6 +52,7 @@ import pandas as pd
 
 from rageval.config import TABLES_DIR
 from rageval.evaluation.spans import span_indices
+from rageval.provenance import record
 
 # --- pre-registered in docs/k-sweep-protocol.md; do not change -------------
 KS = (1, 3, 5, 10, 20)
@@ -217,6 +218,7 @@ def main() -> int:
     steps.assign(chosen_k=chosen, ladder_ceiling=ceiling,
                  rerank_reaches_at_k=reach, boot=BOOT, seed=SEED).to_csv(out_path, index=False)
     curves.to_csv(curve_path, index=False)
+    record([out_path, curve_path])
     print(f"\n  -> {out_path}\n  -> {curve_path}\n")
     return 0
 

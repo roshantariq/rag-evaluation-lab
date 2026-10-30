@@ -52,6 +52,7 @@ from rageval.generate.prompts import PROMPT_STRATEGIES, build_prompt
 from rageval.pipeline import RAGPipeline
 from rageval.retrieve.factory import build_retriever
 from rageval.store.chroma_store import ChromaStore
+from rageval.provenance import record
 
 # --- fixed by docs/phase7-protocol.md; do not change -----------------------
 STRATEGIES = ("naive", "abstain", "abstain_confidence")
@@ -206,6 +207,7 @@ def main() -> int:
     lead = ["id", "question_type", "strategy", "evidence", "gold_spans_in_context", "n_gold_spans"]
     out = out[lead + [c for c in out.columns if c not in lead]]
     out.to_csv(answers_path, index=False, encoding="utf-8")
+    record([answers_path], gold=[EVAL_DIR / "gold_questions.jsonl"])
 
     # --- integrity checks ---------------------------------------------------
     system = {s: PROMPT_STRATEGIES[s] for s in STRATEGIES}
@@ -341,6 +343,7 @@ def run_judge(out, gold, texts, judge_model, budget, faith_path, dry_run, proble
                         "judge_served_model": j.served_model})
     df = pd.DataFrame(records)
     df.to_csv(faith_path, index=False, encoding="utf-8")
+    record([faith_path])
     served = sorted({m for s in df["judge_served_model"] for m in str(s).split(";") if m})
     no_claims = int((df["n_statements"] == 0).sum()) if len(df) else 0
     print(f"\n  judged this run: {new}; from checkpoint: {len(df) - new}; "
@@ -400,6 +403,7 @@ def run_retest(out, gold, texts, judge_model, budget) -> int:
     path = TABLES_DIR / "judge_retest_dryrun.csv"
     path.unlink(missing_ok=True)
     df.to_csv(path, index=False, encoding="utf-8")
+    record([path])
     diffs = df["abs_diff"].dropna()
     same = df[df["same_statements"]]
     n_v = int(same["n_first"].sum())
