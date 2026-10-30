@@ -2358,6 +2358,13 @@ Integrity: prompt isolation 74/74, retrieval identity 174/174
 scorable rows against `retrieval_bm25.csv` at k = 20, no answer cut off
 (longest 168 tokens), one served generator version.
 
+**Retriever: BM25, the Phase 6 selection, not dense.** The pipeline once
+ignored `retrieval.mode` and was dense-only; that was fixed before Phase 7
+(`3827103`, `build_retriever`), `26_generate.py` refuses to run unless
+retrieval is BM25 at k = 20, and check 2 confirms every scorable answer's
+context finds the same gold spans as `retrieval_bm25.csv`. The 33/25
+complete/incomplete split is therefore a property of BM25 at k = 20.
+
 **Labelling** (`27_label_worksheet.py`). The 48 unanswerable answers and 23
 check items (refusal and ambiguity) were shuffled with seed 20260827,
 strategy hidden and the confidence line stripped. Claude labelled both
@@ -2403,11 +2410,29 @@ Floor not reached (8 > 2); the interval excludes zero; **the
 pre-registered outcome is `reduces`.** Every discordant question moves the
 same way.
 
-*Robustness, exploratory:* the result of record is 8/16, on the owner's
-labels. As a check that the outcome does not hinge on the three disputed
-items, they were re-scored as ABSTAIN (Claude's under-counting first
-pass): 5/16, +0.313 [+0.125, +0.563] — still `reduces`. Even the most
-lenient reading of the disputed answers does not change the outcome.
+*What the 45/48 agreement implies, worst case.* The result of record is
+8/16 on the owner's labels. All three disagreements sit in the `naive` arm
+(u007, u014, u004; the abstain arms are 0/16 on both passes). Had all
+three gone the other way:
+
+| naive | delta | bootstrap 95% CI | discordant | McNemar p | Holm p | rule |
+|---|---|---|---|---|---|---|
+| 8/16 (record) | +0.500 | [+0.250, +0.750] | 8/0 | 0.0078 | 0.0156 | reduces |
+| 5/16 (worst case) | +0.313 | [+0.125, +0.563] | 5/0 | 0.0625 | 0.1250 | reduces |
+
+**The direction survives; the significance does not.** Under the deciding
+instrument (the pre-registered bootstrap interval) the worst case is still
+`reduces`; under the exact McNemar test it is not significant, Holm 0.125.
+The two disagree because a percentile bootstrap over 16 questions is less
+conservative than an exact test at this size: with 5 of 16 questions
+discordant, all in one direction, a resample contains none of them with
+probability (11/16)^16 ≈ 0.0025, so the interval's lower bound cannot
+reach zero. The adjudicated labels are the labels, and the outcome of
+record stands; but the result's significance rests on the owner's
+adjudication of three refuse-then-answer items. This supersedes the first
+wording here ("even the most lenient reading does not change the
+outcome"), which reported the interval and omitted the McNemar and Holm
+consequence.
 
 Secondaries (reported, not deciding):
 
@@ -2438,6 +2463,29 @@ Secondaries (reported, not deciding):
   plausibly follows from its 3 refusals being excluded from the incomplete
   group; untested, and the complete/incomplete gaps carry no interval.
 
+Three secondaries carry more than their table rows suggest:
+
+- **Abstention cost nothing.** Zero refusals across all three strategies
+  on the 33 questions whose evidence was complete; all five refusals
+  landed on incomplete evidence. This is what makes the headline usable:
+  the instruction removes hallucination without over-caution.
+- **Stated confidence does not discriminate.** "High" on 32/33 (97%)
+  complete and 23/25 (92%) incomplete answers: five points of separation.
+  Asking the model to state its confidence produced a signal carrying
+  almost no information about whether it had the evidence — a measured
+  negative result about a commonly recommended technique, and more
+  informative than the confidence variant's null on hallucination.
+- **A Phase 3 worry that did not materialise.** `parse_citations`
+  range-checks because citing [7] when fewer passages were supplied is a
+  real failure mode. Across 372 citations in three arms (134, 112, 126),
+  zero were out of range.
+
+**Weak spot: ambiguity is not surfaced.** The ambiguous category exists to
+test whether the system says a question has several defensible answers.
+2/6, 2/6 and 1/6 answers did so, under the owner's reading, and no answer
+said the question was ambiguous or asked which model was meant. No
+strategy helps; the abstention instruction does not touch it.
+
 ### Predictions made in advance, and how they landed
 
 | prediction (`docs/phase7-protocol.md`) | outcome |
@@ -2448,13 +2496,22 @@ Secondaries (reported, not deciding):
 | 4. `abstain_confidence` and `abstain` differ by at most one question on every measure | **Confirmed** — 0 on hallucination, 1 on refusal, 1 on ambiguity |
 | 5. Faithfulness higher on complete than incomplete, every strategy | **Partly wrong** — naive and abstain_confidence yes (≈ 0.10), abstain no |
 
-Predictions 1 and 2 were built on Phase 3's observation that the model
-refused its one absent fact in prose. That question asked for a fact with
-no neighbour in the corpus. The Phase 7 unanswerable questions were built
-to sit next to a real fact, and that is exactly where `naive` fails: it
-answers the neighbouring question. The Phase 3 risk ("instruction-tuned
-models refuse well, so this may measure small") was real for isolated
-absences and wrong for adjacent ones.
+Predictions 1 and 2 leaned on Phase 3's observation that the model
+refused its one absent fact in prose. **This result exists because of a
+risk identified in Phase 3 and mitigated in Phase 4.** Phase 3's n = 1
+test showed both strategies refusing a trivially unanswerable question,
+and the risk register recorded that the headline might measure nothing
+(*Risk raised: the headline finding may be small*). The mitigation
+written down then was that unanswerable questions must be **adjacent, not
+absent**: right domain, right vocabulary, the specific fact genuinely
+missing, absence verified by corpus-wide search. Phase 4 built all 16
+that way. u008 is the archetype: WeatherBench 2 lists SEEPS and lists
+FuXi, but never gives a SEEPS value for FuXi. That is exactly where
+`naive` fails: it answers the neighbouring question. Had the questions
+been "what was the RMSE of IFS in 1987?", `naive` would very likely have
+refused too, and the result would have read 0/16 against 0/16. The
+write-up should state this design decision more prominently than the
+number.
 
 **Decision.** The headline stands as planned: on this corpus and model, an
 explicit abstention instruction takes hallucination on deliberately
