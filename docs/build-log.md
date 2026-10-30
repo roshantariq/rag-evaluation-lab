@@ -2423,16 +2423,48 @@ three gone the other way:
 **The direction survives; the significance does not.** Under the deciding
 instrument (the pre-registered bootstrap interval) the worst case is still
 `reduces`; under the exact McNemar test it is not significant, Holm 0.125.
-The two disagree because a percentile bootstrap over 16 questions is less
-conservative than an exact test at this size: with 5 of 16 questions
-discordant, all in one direction, a resample contains none of them with
-probability (11/16)^16 ≈ 0.0025, so the interval's lower bound cannot
-reach zero. The adjudicated labels are the labels, and the outcome of
-record stands; but the result's significance rests on the owner's
-adjudication of three refuse-then-answer items. This supersedes the first
-wording here ("even the most lenient reading does not change the
-outcome"), which reported the interval and omitted the McNemar and Holm
-consequence.
+The adjudicated labels are the labels, and the outcome of record stands;
+but the result's significance rests on the owner's adjudication of three
+refuse-then-answer items. This supersedes the first wording here ("even
+the most lenient reading does not change the outcome"), which reported the
+interval and omitted the McNemar and Holm consequence.
+
+**Defect in the pre-registered rule: the bootstrap degenerates when an
+arm is at zero.** A second wording, "the bootstrap is less strict than the
+exact test", was also wrong, and is superseded here: the difference is
+structural, not one of sensitivity. `abstain` hallucinated 0/16, so in
+every resample its rate is 0 and the difference cannot be negative. The
+statistic is bounded below at zero by construction, and the percentile
+lower bound leaves zero as soon as the chance of a resample containing
+none of `naive`'s hallucinating questions, ((16 − h)/16)^16, falls under
+2.5%. Computed with the script's own bootstrap (seed 20260827,
+10,000 resamples), abstain fixed at 0/16:
+
+| naive h | P(resample has none) | 95% CI | rule | McNemar p |
+|---|---|---|---|---|
+| 2 | 0.118 | [0.000, +0.312] | floor | 0.5000 |
+| 3 | 0.036 | [0.000, +0.375] | not_separable | 0.2500 |
+| 4 | 0.010 | [+0.062, +0.500] | **reduces** | 0.1250 |
+| 5 | 0.0025 | [+0.125, +0.562] | **reduces** | 0.0625 |
+| 6 | 0.0005 | [+0.125, +0.625] | reduces | 0.0312 |
+| 8 | 0.0000 | [+0.250, +0.750] | reduces | 0.0078 |
+
+In this configuration the pre-registered rule is a threshold on one arm's
+raw count — `naive` ≥ 4 of 16 — not a test of whether the paired
+difference is reliable. McNemar, which reads only discordant pairs, is the
+instrument carrying information when one arm is pinned at a boundary: it
+reaches 0.05 at 6 and survives Holm (2 pairs) at 7. The rule is honoured
+as written. At the record, 8/16, both instruments agree comfortably
+(bootstrap [+0.250, +0.750]; McNemar 0.0078, Holm 0.0156), so the outcome
+does not depend on the defect. In the worst case, 5/16, it does. Found by
+external review after the result, 31 October 2026.
+
+This is the third instance of one pattern: the overlap criterion that put
+a hard threshold on a ratio of two noisy estimates; the sweep 1
+expectation that 512 vs 256 would be a coin flip on half-splits; and now
+a bootstrap that collapses to a count threshold when an arm hits zero.
+Each rule was sound in the middle of its range and was never checked at
+the edges of the data it could meet.
 
 Secondaries (reported, not deciding):
 
@@ -2540,6 +2572,14 @@ independent labelling is on record. Faithfulness is one judge with test-retest n
 0.083.
 
 ### Standing lesson — Phase 7
+
+**A pre-registered rule needs its behaviour checked at the boundaries of
+the data it might meet, not only in the middle.** Before committing a
+rule, run it on the extreme outcomes it admits — an arm at 0 or at 1,
+every pair concordant, the smallest count that clears a floor — and write
+down what it returns. Where one arm is at 0 or 1, a percentile bootstrap
+on the difference is one-sided by construction; report the exact
+discordant-pair test alongside it.
 
 **"Refuses well" was measured on the wrong kind of absence.** A model that
 refuses a question about something the corpus never mentions will still
