@@ -11,7 +11,9 @@ sweep is dropped under its pre-registered condition. The paraphrase
 validity test supports the confound explanation: on rewritten
 high-overlap questions BM25's advantage vanishes. Sweep 3 (cross-encoder
 reranking) is null: +0.079 with a CI touching zero, BM25 stays the
-baseline, reranking carried forward as exploratory. Next: a k sweep.
+baseline, reranking carried forward as exploratory. Sweep 4 sets generation k to 20:
+every step to 20 still adds evidence. Next: the chunk-quality filter
+ablation.
 
 ---
 
@@ -1608,6 +1610,102 @@ BM25's top 100 the whole time. A miss at k=20 says where the evidence
 ranked, not whether the system could find it; the candidate ceiling is the
 number that distinguishes the two, and it should be reported for any
 question called "unreachable".
+
+### Sweep 4 — value of k: k = 20, gains not exhausted
+
+**What it decides.** How many chunks Phase 7 feeds the generator.
+Protocol: `docs/k-sweep-protocol.md`, committed with `21_k_sweep.py` and
+its tests in `71684d0`, before the script was run on the real tables.
+
+**No new run.** The harness already scores every arm at k = 1, 3, 5, 10, 20
+from one ranked list, so this sweep reads `retrieval_bm25.csv`. Recall can
+only rise with k, so this is not a selection under the switching rule. The
+rule walks the ladder and stops at the first step that adds no detectable
+evidence (fixed-sequence testing, cluster bootstrap over questions, 10,000
+resamples, seed 20260827). The protocol records what was already known:
+recall at k=10 and k=20, and two-span completeness at k=10. The script
+checked that the k columns are nested before testing anything.
+
+**Result** — BM25, 58 questions, 101 spans:
+
+| step | recall | gain | 95% CI | spans gained | questions gaining | decision |
+|---|---|---|---|---|---|---|
+| 1 → 3 | 0.218 → 0.416 | +0.198 | [+0.124, +0.277] | 20 | 19 | separable |
+| 3 → 5 | 0.416 → 0.505 | +0.089 | [+0.040, +0.147] | 9 | 9 | separable |
+| 5 → 10 | 0.505 → 0.604 | +0.099 | [+0.041, +0.167] | 10 | 9 | separable |
+| 10 → 20 | 0.604 → 0.663 | +0.059 | [+0.020, +0.106] | 6 | 6 | separable |
+
+**Decision: k = 20**, the top of the ladder. Every step adds evidence
+detectably, so this is where Phase 7 can afford to stop, not where the
+evidence stops arriving. `config/baseline.yaml` `retrieval.k` moves from
+the placeholder 5 to 20. At about 2,100 characters per chunk that is
+roughly 42,000 characters, or about 10,000 tokens, of context per answer.
+
+**Reported, deciding nothing:**
+
+| BM25, all 58 | k=1 | k=3 | k=5 | k=10 | k=20 |
+|---|---|---|---|---|---|
+| span recall | 0.218 | 0.416 | 0.505 | 0.604 | 0.663 |
+| every span found | 12.1% | 32.8% | 39.7% | 48.3% | 56.9% |
+| two-span, both found | 0/33 | 6/33 | 8/33 | 11/33 | 16/33 |
+
+Even at k=20, 43% of scorable questions are missing at least one gold
+passage. **Phase 7 must report faithfulness and hallucination separately
+for questions whose evidence was fully retrieved and those whose evidence
+was not**, otherwise a missing passage reads as a generation failure. That
+is now a Phase 7 requirement, not an option.
+
+*The two-span count.* Phase 5 reported "zero of 32 two-span questions";
+this table says 33. Both are right: 32 is multi-hop plus comparative, and
+the 33rd is the one ambiguous question with two spans. Dense retrieval
+completed zero of all 33 at k=5.
+
+| 20 rewritten questions, 40 spans | k=1 | k=3 | k=5 | k=10 | k=20 |
+|---|---|---|---|---|---|
+| BM25, original wording | 0.275 | 0.450 | 0.500 | 0.575 | 0.675 |
+| BM25, reworded | 0.050 | 0.075 | 0.150 | 0.225 | 0.275 |
+
+On reworded questions more context does not close the gap. BM25 at k=20
+on the reworded set (0.275) only equals BM25 at k=1 on the original
+wording, and is far below its own original k=20 (0.675). Complete
+coverage on the reworded set is flat at 20% from k=10 to k=20. The
+authoring confound is a difference in level, not in how fast evidence
+arrives, so a larger k is not a fix for it.
+
+| reranked BM25 (exploratory) | k=1 | k=3 | k=5 | k=10 | k=20 |
+|---|---|---|---|---|---|
+| span recall | 0.208 | 0.495 | 0.564 | 0.673 | 0.713 |
+| two-span, both found | 0/33 | 11/33 | 14/33 | 19/33 | 20/33 |
+
+Reranked BM25 reaches BM25's k=20 recall by k=10, in half the context.
+That does not change the decision, since generation uses the baseline.
+It is the practical form of sweep 3's direction: if reranking were in the
+pipeline, Phase 7 could feed half as many chunks for the same evidence.
+
+**Predictions:**
+
+| prediction | outcome |
+|---|---|
+| 1. Every step separable, rule returns k=20 | **Confirmed.** 10 → 20 gained 6 spans in 6 questions, above the ~4-question bar |
+| 2. Two-span completeness at k=5 well above Phase 5's zero | **Confirmed**, 8 of 33 |
+| 3. Reworded curve still rising steeply at k=20, so k=20 is optimistic for low-overlap questions | **Partly wrong.** It rises (+0.050 from 10 to 20) but not steeply, and complete coverage is flat. The shortfall is in level: k=20 is optimistic for reworded questions, though not because they need a larger k |
+
+**What went wrong.** Nothing in the run. The protocol has one built-in
+weakness, stated in advance: with nested gains, the rule's bar is about
+four questions gaining a span. It answers "does a step add evidence at
+all", which was foreseeably yes at every step, and prediction 1 said so.
+The rule earned its keep by making k = 20 a stated consequence of a rule
+rather than a choice, not by being uncertain.
+
+**Tables:** `k_sweep.csv`, `k_sweep_curve.csv`.
+
+### Standing lesson — sweep 4
+
+**Not every sweep is a selection.** When the arms are nested prefixes of
+one list, "which wins" is answered by construction, and running the
+switching rule on it would have been theatre. The useful question was
+where the gains stop, and for that the right instrument was a sequence of
+step tests, not a comparison of arms.
 
 ---
 
