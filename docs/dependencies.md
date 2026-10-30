@@ -88,11 +88,25 @@ torch==2.11.0; sys_platform == "darwin"
 ```
 
 macOS has no CUDA wheels, so it gets the plain build; that line is
-untested. `pip install --dry-run --no-deps -r requirements.lock.txt`
-against this environment reports every pin satisfied. A fresh install
-from the lockfile is Phase 9's check, not yet run. `pip freeze` drops
-the index line and the markers, so re-add both after regenerating, as for
-`pywin32`.
+untested. `pip freeze` drops the index line and the markers, so re-add
+both after regenerating, as for `pywin32`.
+
+**Verified by a fresh install, 31 October 2026.** A clone of the
+committed branch (`2d9a2c6`), a new Python 3.11.9 venv, an empty pip
+cache, `pip install -r requirements.lock.txt`: torch resolved from the
+cu128 index as `2.11.0+cu128`, `torch.cuda.is_available()` is True on the
+RTX 5070 Ti and a GPU matmul is correct, `pip check` is clean, `pip freeze`
+is identical to the working environment's, all 358 tests pass, and
+`28_generation_result.py` regenerates `generation_result.csv` with
+identical content. The throwaway environment was then deleted.
+
+**Windows long paths.** The first attempt failed at the final copy step:
+jedi ships deeply nested type stubs, and under a long clone path one
+exceeded Windows' 260-character limit (`OSError: [Errno 2] No such file
+or directory ... remove_stale_contenttypes.pyi`, with pip's long-path
+hint). Not a lockfile defect: the same install succeeded from a short
+path. Clone to a short path such as `C:\RAG Project\...`, or enable
+Windows long-path support. Phase 9's fresh-clone instructions must say so.
 
 ## Open
 
