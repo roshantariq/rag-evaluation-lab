@@ -2811,6 +2811,70 @@ table: 7,992 cells, no disagreement. After it, scripts 15, 16, 17, 19 and
 20 were re-run and their tables came out identical to the committed ones.
 A fix to this guard now lands everywhere at once.
 
+**MLflow is not adopted; a provenance ledger replaces it (31 October
+2026).** The build plan's Phase 6 acceptance criterion was "17 logged runs,
+re-runnable by run ID". No document recorded that the project departed
+from it; this entry does.
+
+*Why not retrofit MLflow.* The deciding argument is provenance, not cost.
+Logging August's runs into a tracking store in October would create
+records dated October, with October's code state, describing runs that
+happened in August: fabricated provenance inside the artifact whose only
+job is to establish it. MLflow also could not deliver the criterion's
+purpose here: `mlruns/` is gitignored by project rule, so a fresh clone
+would hold no run IDs to re-run.
+
+*What the criterion was for, and what now delivers it.* "Re-runnable by
+run ID" needs the command, not just the code state. Every table-writing
+script (10–12, 15–28) now appends one row per table to
+`results/tables/provenance.csv`, through one helper
+(`rageval.provenance`, the `count_spans` precedent): table, full command
+line, git commit, a dirty-tree flag with the paths behind it, the gold
+files read and their sha256, a UTC timestamp, and `source`. The dirty flag
+is the part not dropped: a commit recorded from a modified tree names code
+that did not produce the table, which is worse than no commit, and an
+unreported guard is this project's signature failure. It counts every
+uncommitted change except the run's own outputs, including other tables,
+since 13–28 read them. When git cannot answer, the commit and flag read
+`unknown`, never clean.
+
+*Defect found while building it.* `git status` marks a table rewritten
+with CRLF endings as modified even when its content is identical, and
+pandas writes CRLF on Windows. The first regeneration therefore recorded
+35 of 36 rows dirty, each through sibling tables that earlier re-runs had
+rewritten byte-for-byte in content. The flag now reads tracked changes
+from `git diff HEAD`, which compares content after the repo's `eol=lf`
+normalisation, and a real-git test pins both directions. The provisional
+ledger was discarded and the regeneration re-run from a clean tree.
+
+*Retrofit.* Each of the 77 tables committed before the ledger carries one
+`retrofit` row. Its commit, dirty flag, gold hash and timestamp are
+`unknown` in every case; none is inferred. The command is filled only
+from evidence, which the `note` column states:
+
+| evidence | tables |
+|---|---|
+| re-run 31 Oct 2026 at `b74fe8f`, clean tree, reproduced exactly (each also has a `recorded` row) | 36 |
+| command quoted in the build log, a protocol, CLAUDE.md or the session record; not re-run (needs the index, GPU or API) | 22 |
+| no command on record: `unknown` | 19 |
+
+The 36 reproduced cover every table that scripts 15, 16, 19–22, 24, 25,
+27 and 28 write, plus both `lexical_overlap_groups_*` tables. The 19
+unknown include `retrieval_baseline.csv`, the Phase 5 dense run that
+comparisons, the oracle ceiling and the truncation diagnostic all read,
+plus `retrieval_chunk256`, `retrieval_chunk1024`, the three hybrid RRF
+runs, the six oracle tables, the truncation table, the Phase 2 audits and
+the two dry-run tables. Phase 9's fresh-clone check should start there.
+
+*One documented command was wrong.* CLAUDE.md listed
+`python scripts\17_lexical_overlap.py` for the overlap diagnostic. The
+committed `lexical_overlap.csv` was written by the `--k 10` run, which
+shares its default output path and ran after the budget run; the
+no-argument command writes different hit counts. With `--k 10` it matches
+on every id, type, evidence count and hit, with overlaps within 3.3e-16,
+so it is recorded with its command but no `recorded` row, as it is not
+byte-identical.
+
 ---
 
 ## Open items
