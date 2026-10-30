@@ -12,8 +12,9 @@ validity test supports the confound explanation: on rewritten
 high-overlap questions BM25's advantage vanishes. Sweep 3 (cross-encoder
 reranking) is null: +0.079 with a CI touching zero, BM25 stays the
 baseline, reranking carried forward as exploratory. Sweep 4 sets generation k to 20:
-every step to 20 still adds evidence. Next: the chunk-quality filter
-ablation.
+every step to 20 still adds evidence. The chunk-quality filter is null at
+0.3, 0.4 and 0.5: under BM25, low-prose chunks hold at most 2.2% of top-10
+slots. Next: section-aware, recursive and semantic chunkers.
 
 ---
 
@@ -1706,6 +1707,112 @@ one list, "which wins" is answered by construction, and running the
 switching rule on it would have been theatre. The useful question was
 where the gains stop, and for that the right instrument was a sequence of
 step tests, not a comparison of arms.
+
+### Chunk-quality filter ablation: NULL at every threshold
+
+**What it closes.** Phase 2b removed base64 only and deferred filtering
+low-prose chunks to a measured ablation rather than a silent filter. This
+is that ablation. Protocol: `docs/chunk-filter-protocol.md`, committed with
+the code and tests in `6dd14d3`, before any filtered run.
+
+**Built.** `prose_ratio` moved unchanged from `diagnose_chunks.py` to
+`rageval.chunking.quality`, with `filter_records`. The harness gained
+`--min-prose-ratio` (bm25 mode only; it refuses dense, whose store cannot
+be filtered without a rebuild). The filter drops chunks before BM25 is
+built, so IDF and average length are recomputed over the survivors.
+Removed chunks that held gold evidence still count as relevant. The
+harness also builds unfiltered BM25 alongside and records, per question,
+how many unfiltered top-10 slots the filter removed (`low_prose_top10`).
+That is the mechanism check: the only slots a filter can free.
+`22_filter_result.py` applies the decision table.
+
+**Known before any run.** Recomputed from the index, the score matches
+`chunk_quality.csv` exactly. No gold span sits wholly in a chunk removed
+at 0.3 or 0.4. At 0.5, f011's only evidence chunk (prose ratio 0.44) is
+removed, so f011 becomes unreachable by construction.
+
+**Result** — span recall, 58 questions, 101 spans, against unfiltered BM25:
+
+| arm | chunks removed | budget 20k | delta | 95% CI | win rate | freed top-10 slots | outcome |
+|---|---|---|---|---|---|---|---|
+| bm25 (off) | 0 | 0.584 | — | — | 15.3% | — | control |
+| filter030 | 71 (2.4%) | 0.584 | +0.000 | [+0.000, +0.000] | 14.4% | 3 of 580, in 3 questions | not separable |
+| filter040 | 127 (4.3%) | 0.594 | +0.010 | [+0.000, +0.032] | 51.5% | 7 of 580, in 7 questions | not separable |
+| filter050 | 211 (7.2%) | 0.584 | +0.000 | [−0.030, +0.029] | 18.8% | 13 of 580, in 11 questions | not separable |
+
+Every Holm p = 1.0000 across the six pairs. 2,994 of 4,000 half-splits
+were exact ties. Selection stability calls it a coin flip.
+
+| arm | k=10 | k=20 |
+|---|---|---|
+| bm25 | 0.604 | 0.663 |
+| filter030 | 0.604 (+0.000) | 0.663 (+0.000) |
+| filter040 | 0.604 (+0.000) | 0.663 (+0.000) |
+| filter050 | 0.594 (−0.010) | 0.644 (−0.020) |
+
+**Decision: no filter. BM25 stays unfiltered.**
+
+**Every span that moved, read by hand:**
+
+- `filter030` changes nothing at any metric.
+- `filter040` adds m018 span 1 at the 20k budget only. At k=10 and k=20 it
+  is identical to BM25. The gain is budget packing: removing chunks changed
+  which chunks fit in 20,000 characters. It is not a top-10 effect.
+- `filter050` adds the same m018 span at the budget and loses f011 (by
+  construction, as the protocol stated) and, at k=20, m002 span 1 (a span
+  the pre-check flagged as losing one of its overlapping chunks).
+
+So across three thresholds and three metrics, the filter's whole effect
+is one span gained by packing and two spans lost to deleted evidence.
+
+**Why: low-prose chunks barely reach BM25's top 10.** Even at 0.5 they
+hold 13 of 580 unfiltered top-10 slots (2.2%), and at 0.4 they hold 7
+(1.2%). The motivating failure — axis labels filling the top five for
+"fraction skill score" — was a dense-retrieval failure. BM25 ranks by
+shared terms, and a question shares few terms with a run of numbers.
+Replacing dense with BM25 in sweep 2 removed most of the problem the
+filter was meant to solve.
+
+**Predictions:**
+
+| prediction | outcome |
+|---|---|
+| 1. All three not separable; freed slots well under 10% of 580 | **Confirmed.** 0.5%, 1.2%, 2.2% |
+| 2. No arm reaches 90%; many exact ties | **Confirmed.** Best 51.5%; 2,994 of 4,000 ties |
+| 3. If any arm is worse, it is `filter050` | **No arm is worse.** `filter050` is the only one that loses evidence (f011, and m002 at k=20), in the predicted direction but not separably |
+
+**What it means for the headline plan.** CLAUDE.md's fallback headline
+is the chunk-quality finding: figure axis labels dominate retrieval for
+metric-name queries. Under BM25, on this gold set, they do not. Low-prose
+chunks hold at most 2.2% of the top-10 slots. The finding stands for
+dense retrieval (Phase 3) and needs that qualifier wherever it is used.
+
+**Threat, as declared.** The gold set under-represents table evidence,
+because every span was quoted from readable text. A null here does not
+show a prose filter is harmless for questions answered by a table.
+
+**What went wrong.** The pre-registration commit first landed on the
+owner's local `main`. The owner's merge had left the working copy on
+`main`, and the branch was not re-checked before committing. It was
+caught before any push (remote `main` untouched) and moved to the work
+branch. Nothing about the run was affected; the protocol was committed
+before any filtered run either way.
+
+**Tables:** `retrieval_filter030.csv`, `retrieval_filter040.csv`,
+`retrieval_filter050.csv`,
+`paired_bm25_filter030_filter040_filter050_{B20000,k10,k20}.csv`,
+`stability_bm25_filter030_filter040_filter050_B20000.csv`,
+`filter_result.csv`.
+
+### Standing lesson — chunk-quality filter
+
+**A fix designed for one component can be made moot by replacing that
+component.** The filter was specified in Phase 2b against dense
+retrieval's failure. Two sweeps later the retriever had changed, and the
+mechanism check — slots the filter could free — showed the problem had
+mostly gone with it. Measuring the opportunity before the effect is what
+let a null be read as "nothing to fix" rather than "the filter does not
+work".
 
 ---
 

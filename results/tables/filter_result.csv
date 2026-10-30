@@ -1,0 +1,4 @@
+arm,threshold,metric,recall_bm25,recall_arm,delta,ci_lo,ci_hi,p_holm,win_rate,outcome,freed_top10_slots,questions_with_freed_slots,chosen,control_win_rate
+filter030,0.3,"budget 20,000",0.5841584158415841,0.5841584158415841,0.0,0.0,0.0,1.0,0.144,not_separable,3,3,bm25,0.1535
+filter040,0.4,"budget 20,000",0.5841584158415841,0.594059405940594,0.0099009900990099,0.0,0.031578947368421,1.0,0.51475,not_separable,7,7,bm25,0.1535
+filter050,0.5,"budget 20,000",0.5841584158415841,0.5841584158415841,0.0,-0.0297029702970297,0.0294117647058823,1.0,0.18775,not_separable,13,11,bm25,0.1535
