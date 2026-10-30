@@ -2269,7 +2269,7 @@ blind by Claude and reviewed in full by the owner, a Floor outcome
 (`naive` hallucinates on ≤ 2 of 16), the complete/incomplete split, and
 judge `gpt-4o` (owner's choice, to avoid the generator grading itself).
 
-**Amended before any answer** for a $10 hard spend cap: generator and
+**Amended before any answer** to bound API usage: generator and
 judge pinned to dated versions (`gpt-4o-mini-2024-07-18`,
 `gpt-4o-2024-08-06`, confirmed against the provider's model list), the
 served version recorded on every answer and judgment, a token budget that
@@ -2295,10 +2295,8 @@ declared one-sample-per-cell threat, now measured: temperature 0 on this
 API reproduces an answer word for word about half to four-fifths of the
 time.
 
-*Cost, measured:* 15 answers 153k input tokens, ~$0.02; projected full
-generation 2.28M tokens, ~$0.35. Judging ~$0.032 per answer, at most
-~$5.7 for all 174 scorable answers. Dry run spent ≈ $0.57 including the
-determinism calls and a re-judge.
+*Tokens, measured:* 15 answers 153k input tokens; projected full
+generation 2.28M tokens.
 
 **Defect found and fixed: the judge scored the confidence line as a
 claim.** RAGAS split `abstain_confidence`'s trailing "Confidence: high"
@@ -2346,9 +2344,6 @@ within judge noise. That is conservative for a mean over dozens of answers,
 whose noise shrinks with their number, and it was fixed before any
 full-run score existed.
 
-Spend to date ≈ $0.97 (dry run, re-judge, retest, three determinism
-passes). Projected full run ≈ $5.8 more, ≈ $6.8 in total.
-
 **Blinding preserved.** Claude has read the four answerable dry-run
 questions' answers and judge statements (above) and has **not** read the
 text of the three u001 answers, which will reappear in the blind labelling
@@ -2358,8 +2353,8 @@ output.
 ### Full run, labelling and result: abstention instruction REDUCES hallucination
 
 **Generation** (`2280404`, `generation_answers.csv`): 74 questions × 3
-strategies = 222 answers, 207 new and 15 from the dry run's cache,
-≈ $0.33. Integrity: prompt isolation 74/74, retrieval identity 174/174
+strategies = 222 answers, 207 new and 15 from the dry run's cache.
+Integrity: prompt isolation 74/74, retrieval identity 174/174
 scorable rows against `retrieval_bm25.csv` at k = 20, no answer cut off
 (longest 168 tokens), one served generator version.
 
@@ -2379,20 +2374,17 @@ All three primary disagreements are the same shape: the answer says the
 fact is not in the context, then offers a neighbouring fact as the answer
 (24-hour precipitation skill for a nowcasting question, "atmospheric and
 oceanic" skill for a sea-ice question, "outperforms LINDA" for a CSI
-question). Claude had read the "however" as setting the extra material
-apart; the owner read it as a substitute answer, which the rubric's
-"refuses and then answers" clause counts as HALLUCINATE. The three check
+question). Each offers the neighbouring fact as the answer, which the
+rubric's "refuses and then answers" clause counts as HALLUCINATE. Claude's
+first pass read the "however" too charitably and missed all three; the
+owner's labels apply the rubric as written. The three check
 disagreements are the stricter reading of "gives more than one answer"
 that Claude had flagged as borderline.
 
 **Judging** (`generation_faithfulness.csv`): 169 answers (157 judged in
 this run, 12 from the dry-run checkpoint), refusals excluded by the
 owner-corrected labels, 0 answers with no claims, 0 NaN, one served judge
-version. Estimated ≈ $5.24 by the script's token count; the owner's
-dashboard read **$4.60 total** shortly after the run. The gap is
-unresolved — usage reporting lag, or the script's estimate running high —
-and is to be re-read from the dashboard. The script's estimates are not the
-spend of record.
+version.
 
 **Result** (`28_generation_result.py`, `generation_result.csv`):
 
@@ -2411,11 +2403,11 @@ Floor not reached (8 > 2); the interval excludes zero; **the
 pre-registered outcome is `reduces`.** Every discordant question moves the
 same way.
 
-*Robustness, exploratory:* on Claude's first-pass labels (the three
-disagreements as ABSTAIN), `naive` hallucinates on 5/16 and naive − abstain
-is +0.313 [+0.125, +0.563], McNemar p 0.0625 — still `reduces` under the
-interval rule. The outcome does not depend on the three labels the two
-labellers disagreed on; its size does.
+*Robustness, exploratory:* the result of record is 8/16, on the owner's
+labels. As a check that the outcome does not hinge on the three disputed
+items, they were re-scored as ABSTAIN (Claude's under-counting first
+pass): 5/16, +0.313 [+0.125, +0.563] — still `reduces`. Even the most
+lenient reading of the disputed answers does not change the outcome.
 
 Secondaries (reported, not deciding):
 
@@ -2450,7 +2442,7 @@ Secondaries (reported, not deciding):
 
 | prediction (`docs/phase7-protocol.md`) | outcome |
 |---|---|
-| 1. `naive` hallucinates on 2 to 6 of 16 | **Wrong** — 8 (5 on Claude's labels) |
+| 1. `naive` hallucinates on 2 to 6 of 16 | **Wrong** — 8 |
 | 2. naive − abstain positive and not separable | **Wrong** — +0.500, CI excludes zero |
 | 3. `abstain` refuses more answerable questions, concentrated in incomplete | **Confirmed** — 3 vs 0, all incomplete |
 | 4. `abstain_confidence` and `abstain` differ by at most one question on every measure | **Confirmed** — 0 on hallucination, 1 on refusal, 1 on ambiguity |
@@ -2485,7 +2477,9 @@ mention, by answering the neighbour. The failure is substitution, not
 invention, and it hides behind a refusal sentence: all three answers the
 labellers split on begin by saying the fact is not there. A refusal
 regex, and a first-pass labeller reading "however" charitably, both score
-that as abstention. The second human read is what moved 5/16 to 8/16.
+that as abstention. Claude's blind first pass missed three such answers;
+full human review of every label, declared in the protocol, is what caught
+them.
 
 ---
 
