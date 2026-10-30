@@ -26,14 +26,6 @@ Implements the labelling section of docs/phase7-protocol.md.
             writes results/tables/generation_labels.csv and
             generation_checks.csv. Refuses an incomplete worksheet.
 
-  --relabel-build, --relabel-read
-            An unanchored second pass on the 48 primary answers, added after
-            the owner noted that the first review showed Claude's labels.
-            Same answers and rubric, a new shuffle, no "claude:" line and no
-            notes. --relabel-read compares it with the first review and
-            writes results/tables/generation_relabel.csv. It does not
-            replace generation_labels.csv.
-
 Labels are typed into the file directly. Gold text never passes through
 the console (bug museum: cp1252).
 """
@@ -62,12 +54,6 @@ LABEL_SHEET = EVAL_DIR / "label_worksheet.txt"
 LABEL_KEY = EVAL_DIR / "label_key.csv"
 CHECK_SHEET = EVAL_DIR / "check_worksheet.txt"
 CHECK_KEY = EVAL_DIR / "check_key.csv"
-
-# Unanchored relabel: a seed other than the first sheet's, so item numbers
-# and order cannot be recalled from the first review.
-RELABEL_SEED = 20261030
-RELABEL_SHEET = EVAL_DIR / "relabel_worksheet.txt"
-RELABEL_KEY = EVAL_DIR / "relabel_key.csv"
 
 RUBRIC = """\
 PHASE 7 LABELLING WORKSHEET: answers to UNANSWERABLE questions
@@ -118,13 +104,11 @@ def indent(text: str) -> str:
     return "\n".join("    " + line for line in text.strip().splitlines())
 
 
-def block(n: int, total: int, fields: list[tuple[str, str]], answer: str,
-          labellers: tuple[str, ...] = ("claude", "owner")) -> str:
+def block(n: int, total: int, fields: list[tuple[str, str]], answer: str) -> str:
     head = [f"=== item {n:02d} of {total} ==="]
     for name, value in fields:
         head.append(f"{name}: {value}")
-    head += ["answer:", indent(strip_confidence(answer)),
-             *(f"{who}: " for who in labellers), "note: ", ""]
+    head += ["answer:", indent(strip_confidence(answer)), "claude: ", "owner: ", "note: ", ""]
     return "\n".join(head)
 
 
@@ -244,59 +228,6 @@ def read() -> int:
     return 0
 
 
-def relabel_build(answers_path: Path) -> int:
-    if RELABEL_SHEET.exists():
-        print(f"{RELABEL_SHEET.name} exists; refusing to overwrite labels. Move it aside first.")
-        return 2
-    out = pd.read_csv(answers_path, dtype=str, keep_default_na=False)
-    gold = {q.id: q for q in load_gold(EVAL_DIR / "gold_questions.jsonl")}
-    primary = out[out["question_type"] == "unanswerable"].reset_index(drop=True)
-    order = list(range(len(primary)))
-    random.Random(RELABEL_SEED).shuffle(order)
-    rubric = RUBRIC.replace("LABELLING WORKSHEET", "RELABEL WORKSHEET").replace(
-        'Fill in after "claude:" or "owner:" on each item.',
-        'Fill in after "owner:" on each item. No earlier label is shown.')
-    blocks, key = [rubric], []
-    for n, i in enumerate(order, 1):
-        r = primary.iloc[i]
-        q = gold[r["id"]]
-        blocks.append(block(n, len(order), [("question", q.question),
-                                            ("what the corpus says", q.reference_answer)],
-                            r["answer"], labellers=("owner",)))
-        key.append({"item": n, "id": r["id"], "strategy": r["strategy"]})
-    RELABEL_SHEET.write_text("\n".join(blocks), encoding="utf-8")
-    pd.DataFrame(key).to_csv(RELABEL_KEY, index=False, encoding="utf-8")
-    print(f"wrote {RELABEL_SHEET.name} ({len(key)} items); key written separately and not printed.")
-    return 0
-
-
-def relabel_read() -> int:
-    items = parse(RELABEL_SHEET)
-    bad = [n for n, f in sorted(items.items()) if f.get("owner", "").upper() not in PRIMARY_LABELS]
-    if bad:
-        print(f"Labels incomplete or invalid on items {bad}; nothing written.")
-        return 2
-    key = pd.read_csv(RELABEL_KEY, dtype=str)
-    key["relabel"] = [items[int(n)]["owner"].upper() for n in key["item"]]
-    key["note"] = [items[int(n)].get("note", "") for n in key["item"]]
-    first = pd.read_csv(TABLES_DIR / "generation_labels.csv", dtype=str, keep_default_na=False)
-    first = first.rename(columns={"final": "first_review"})[["id", "strategy", "claude", "first_review"]]
-    df = key.merge(first, on=["id", "strategy"], how="left", validate="one_to_one")
-    df["agree_first_review"] = df["relabel"] == df["first_review"]
-    df["agree_claude"] = df["relabel"] == df["claude"]
-    path = TABLES_DIR / "generation_relabel.csv"
-    path.unlink(missing_ok=True)
-    df.to_csv(path, index=False, encoding="utf-8")
-    print(f"relabel vs first review: {int(df.agree_first_review.sum())}/{len(df)} agree")
-    print(f"relabel vs Claude:       {int(df.agree_claude.sum())}/{len(df)} agree")
-    for s, g in df.groupby("strategy"):
-        print(f"  {s:20s} HALLUCINATE  relabel {int((g.relabel == 'HALLUCINATE').sum())}/16  "
-              f"first review {int((g.first_review == 'HALLUCINATE').sum())}/16  "
-              f"Claude {int((g.claude == 'HALLUCINATE').sum())}/16")
-    print(f"wrote {path.name}")
-    return 0
-
-
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -304,17 +235,11 @@ def main() -> int:
     mode.add_argument("--build", action="store_true")
     mode.add_argument("--status", action="store_true")
     mode.add_argument("--read", action="store_true")
-    mode.add_argument("--relabel-build", action="store_true")
-    mode.add_argument("--relabel-read", action="store_true")
     ap.add_argument("--answers", default=str(TABLES_DIR / "generation_answers.csv"))
     args = ap.parse_args()
     sys.stdout.reconfigure(encoding="utf-8")
     if args.build:
         return build(Path(args.answers))
-    if args.relabel_build:
-        return relabel_build(Path(args.answers))
-    if args.relabel_read:
-        return relabel_read()
     return status() if args.status else read()
 
 

@@ -2465,7 +2465,21 @@ whose evidence was complete. The confidence variant adds nothing.
 established, the size is not. One generator, one corpus, one wording per
 strategy, one sample per cell (determinism measured at 2/5 to 4/5 word for
 word). Hallucination labels are human judgement, with all disagreement on
-refuse-then-answer cases. Faithfulness is one judge with test-retest noise
+refuse-then-answer cases.
+
+**The owner's review was blind to strategy but not to Claude's labels.**
+Each worksheet item showed Claude's label and notes above the owner's
+line, so 45/48 is not agreement between independent labellers, and the
+owner's labels may be anchored on Claude's. Every disagreement went
+stricter than Claude, so any anchoring would have pushed toward fewer
+hallucinations, not more; that is an argument, not a measurement. Claude
+was also not perfectly blind: before labelling it had seen the
+generation log, which pairs question id, strategy and the regex refusal
+flag, and it wrote the questions. Answer style also reveals strategy
+("INSUFFICIENT CONTEXT" comes almost only from the abstain prompts). An
+unanchored relabel sheet (no Claude labels, new shuffle) was built
+(`9a3330d`) and withdrawn unfilled at the owner's decision; no
+independent labelling is on record. Faithfulness is one judge with test-retest noise
 0.083.
 
 ### Standing lesson — Phase 7
