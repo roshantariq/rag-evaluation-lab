@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import json
 import math
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -95,6 +96,20 @@ class Judgment:
     def score(self) -> float | None:
         """Supported share of statements; None when the answer made no claim."""
         return self.n_supported / self.n_statements if self.n_statements else None
+
+
+_CONFIDENCE_LINE = re.compile(r"\s*Confidence:\s*(high|medium|low)\s*\.?\s*$", re.IGNORECASE)
+
+
+def strip_confidence(answer: str) -> str:
+    """Drop abstain_confidence's trailing self-rating before judging.
+
+    The dry run showed the judge turning "Confidence: high" into the claim
+    "the confidence level is high" and marking it unsupported, a penalty
+    only one strategy pays. The line is a rating of the answer, not a
+    claim about the papers; labelling removes it for the same reason.
+    """
+    return _CONFIDENCE_LINE.sub("", answer).rstrip()
 
 
 def answer_key(qid: str, strategy: str, answer: str, judge_model: str) -> str:
