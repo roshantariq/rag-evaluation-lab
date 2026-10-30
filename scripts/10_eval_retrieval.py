@@ -43,6 +43,12 @@ could free.
 spans are read, sliced from the frozen extraction, and indexed by BM25
 (bm25 mode only, since there are no embeddings). Relevant-chunk counts
 come from the same spans, so nDCG denominators match what is retrieved.
+
+`--no-embed-cache` embeds every query fresh and writes nothing back to
+the embedding cache (dense and hybrid). The cache keys on (model, text)
+alone, so it cannot say which device or torch version produced a vector;
+this is how a cached run is checked against freshly computed queries.
+`--embed-device cpu|cuda` pins the device those fresh queries use.
 """
 
 from __future__ import annotations
@@ -241,6 +247,10 @@ def main() -> int:
     parser.add_argument("--min-prose-ratio", type=float, default=None,
                         help="Drop chunks below this prose ratio from the BM25 "
                              "index (bm25 mode only). See rageval/chunking/quality.py.")
+    parser.add_argument("--no-embed-cache", action="store_true",
+                        help="Embed queries fresh; neither read nor write the cache.")
+    parser.add_argument("--embed-device", default=None, choices=("cpu", "cuda"),
+                        help="Device for computing query embeddings (default: CUDA if present).")
     parser.add_argument("--chunks", default=None, metavar="NAME",
                         help="Score results/tables/chunks_NAME.csv instead of the "
                              "Chroma collection (bm25 mode only).")
@@ -308,7 +318,9 @@ def main() -> int:
     else:
         print(f"  collection   : {cfg['index']['collection']}  ({store.count()} chunks)")
     if mode in ("dense", "hybrid"):
-        print(f"  embedding    : {cfg['embedding']['model']}")
+        print(f"  embedding    : {cfg['embedding']['model']}"
+              f"{'  (cache OFF: queries embedded fresh)' if args.no_embed_cache else ''}"
+              f"{f'  device {args.embed_device}' if args.embed_device else ''}")
     if mode == "hybrid":
         if args.fusion == "rrf":
             print(f"  fusion       : RRF k={args.rrf_k}, pool={args.pool} per retriever")
@@ -355,7 +367,9 @@ def main() -> int:
     # --- retrievers --------------------------------------------------------
     encoder = None
     if mode in ("dense", "hybrid"):
-        encoder = Encoder(cfg["embedding"]["model"], cache_path=EMBED_CACHE)
+        encoder = Encoder(cfg["embedding"]["model"],
+                          cache_path=None if args.no_embed_cache else EMBED_CACHE,
+                          device=args.embed_device)
 
     bm25 = unfiltered = None
     removed_ids: set[str] = set()
