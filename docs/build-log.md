@@ -2495,6 +2495,49 @@ that as abstention. Claude's blind first pass missed three such answers;
 full human review of every label, declared in the protocol, is what caught
 them.
 
+### Before Phase 8: c006 and c008 re-read by hand
+
+Both lost their found span under reranking (sweep 3) and both were once
+authored against the wrong paper (bug museum: stale `--out`). Re-read
+against the frozen extraction by Claude, reviewed and accepted by the
+owner, 30 October 2026. Mechanically both are sound: spans come from
+GraphCast (2212.12794v2) and FuXi (2306.12873v3), the FuXi quotes differ
+from the text only by line breaks at a page boundary, and
+`08_validate_gold.py` reports all questions valid. Two content defects:
+
+- **c006, partial span coverage.** The FuXi span supports the cascade of
+  three fine-tuned models (0-5, 5-10, 10-15 days). The GraphCast span gives
+  only the horizon (6-hour steps, 10 days, 40 steps); the mechanism the
+  reference answer names ("GraphCast is autoregressive: it can be rolled
+  out by feeding its own predictions back in", char 7142) is not a gold
+  span, nor is FuXi's stated reason for cascading ("relying on a single
+  model has been found to be insufficient", char ~1700). An answer built
+  only from the gold spans cannot state half the reference answer, so
+  Phase 7 counts c006 as "complete" when its spans are not sufficient.
+- **c008, the reference answer conflates ground truth with baseline.** The
+  GraphCast half (ERA5 as ground truth, the HRES-fc0 adjustment) is right
+  and fully supported. For FuXi the reference gives the ECMWF ensemble
+  mean, which is FuXi's comparison baseline, not its ground truth. FuXi's
+  own text says "FuXi and GraphCast are evaluated against the ERA5
+  reanalysis dataset, and ECMWF HRES is evaluated against HRES-fc0" (char
+  33662), and it uses HRES-fc0 and ENS-fc0 as ground truth for the ECMWF
+  baselines (char 30341): the same adjustment GraphCast made. Read with
+  one meaning of "evaluate against", the two papers agree, and the
+  question implies a contrast that does not exist.
+
+**Decision.** The gold set is closed (§3 of CLAUDE.md), so neither question
+is reworded. Both defects go into Phase 8's limitations and per-question
+notes. No headline number moves: they are 2 of 58 scorable questions,
+retrieval scoring is by span overlap and does not read the reference
+answer, and the Phase 7 judge scores answers against retrieved context,
+not against the reference.
+
+**Lesson.** This is the "valid but wrong" class again, now in a milder
+form: not evidence from the wrong paper, but evidence that is right and
+insufficient (c006) and a reference answer that uses one phrase in two
+senses (c008). Mechanical validation checks that a quote is where it says
+it is; it cannot check that the spans carry the whole answer.
+
 ---
 
 ## Plan amendments
