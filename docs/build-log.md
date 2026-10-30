@@ -360,6 +360,83 @@ including an answer that supplies content while noting a gap. The regex is
 explicitly a first pass — at Phase 7 scale (16 unanswerable questions x 3
 strategies = 48 answers) every label is hand-verified.
 
+### Defect found (30 October 2026, before Phase 7): three undeclared constants in one function
+
+*Found while measuring prompt sizes for the Phase 7 protocol, before any
+Phase 7 answer was generated. Recorded here because it is Phase 3 code.*
+
+`format_context`, the nine-line function that turns retrieved chunks into
+the numbered passages the generator reads, held three transformations
+that no config, script or document declared:
+
+| constant | what it did | measured effect |
+|---|---|---|
+| `max_chars_per_hit: int = 2000` | cut every passage at 2,000 characters, mid-word | 1,846 of 2,938 chunks cut (62.8%), 7.2% of all chunk text never shown. At k = 20, **17 of the 67 retrieved gold spans partly hidden** (between 2% and 56% of the span lost), none wholly |
+| `h.title[:70]` | truncated the paper title in each passage label | cosmetic; the title is a display label and touches no measured quantity |
+| `" ".join(h.text.split())` | collapsed whitespace | **0.9996** of raw characters survive over the 20k-budget context, in every chunk set (table below) |
+
+The cap arrived with the generation layer (`4cb8e1c`, 26 August 2026).
+Neither that commit nor this log gave a reason for it. The index built the
+same day has a median chunk of 2,113 characters, so the cap cut most
+passages from the first call it ever served.
+
+**The finding is not "the cap was 2,000".** It is that three undeclared
+constants lived in one nine-line function because **a default argument is
+invisible everywhere a config file is read.** `build_prompt` called
+`format_context(hits)` with no argument, so the value appeared in no
+config, no script and no test, and nothing that read `baseline.yaml` could
+see it. Retrieval scoring never calls `format_context`, so Phases 5 and 6,
+which measured everything else about the context, could not expose it.
+Had Phase 7 run with it, "all gold evidence in context" would have
+included questions whose answering sentence had been cut off: the exact
+confusion the evidence-completeness split exists to prevent.
+
+*Resolution.* The parameter is deleted: not raised, not set to `None`. A
+default argument is where this one hid. If a cap is ever needed, it is
+added then as a declared config value that reports when it fires. The
+title truncation stays, commented as cosmetic. The whitespace collapse
+stays, commented with its measured ratio. Two tests pin the behaviour: a
+passage longer than any chunk in the index is sent whole, and the three
+strategies send a byte-identical user message. No answer was affected:
+the response cache held 3 entries, all from this phase's dense, top-5
+testing.
+
+**Consequence for the character-budget metric, recorded separately.**
+The budget's stated justification (Phase 5; sweep 1, "a generator is
+bounded by its context window, not by document count") is that equal
+budgets hand a generator equal text. `take_within_budget` packs by raw
+span length, `char_end − char_start`. Measured over the context packed at
+the 20k budget for the 58 scorable questions, BM25 on every chunk set:
+
+| chunk set | raw chars | collapsed (emitted) | ratio | with the 2,000 cap | cap ratio | chunks cut | tokens per char |
+|---|---|---|---|---|---|---|---|
+| fixed_256 | 1,131,568 | 1,131,150 | 0.9996 | 1,131,150 | 1.000 | 0 / 1,061 | 0.226 |
+| **fixed_512** | 1,096,012 | 1,095,623 | 0.9996 | 1,014,989 | 0.926 | 386 / 524 | 0.231 |
+| fixed_1024 | 1,022,180 | 1,021,825 | 0.9997 | 492,000 | **0.481** | 246 / 246 | 0.231 |
+| section | 1,101,451 | 1,101,067 | 0.9997 | 926,993 | 0.842 | 340 / 491 | 0.230 |
+| recursive | 1,094,141 | 1,094,038 | 0.9999 | 902,433 | 0.825 | 365 / 478 | 0.229 |
+| semantic | 1,095,437 | 1,095,095 | 0.9997 | 892,743 | 0.815 | 332 / 479 | 0.232 |
+
+(All 74 questions give the same collapse ratios to four places.)
+
+- **The comparisons hold.** Every arm was packed and scored by the same
+  raw-character rule, and no retrieval score passes through
+  `format_context`. No number in Phases 5 or 6 changes. The collapse is
+  uniform across arms, and so is the token rate per character, so a
+  character budget is also a fair token budget (20k characters is about
+  4,600 tokens in every arm).
+- **The stated justification did not hold for the code as it stood.**
+  While the cap existed, "equal budget" equalised the text handed to the
+  *scorer*, not to the generator. Sweep 1's equal-budget view would have
+  delivered `fixed_1024` 48% of its budget and `fixed_256` all of it, and
+  the chunker sweep's structure-aware arms 82–84% against `fixed_512`'s
+  93%. Every selection was made on the scored text, so none is affected,
+  but the sentence "the budget is what the generator sees" was false until
+  this fix. With the cap deleted it is true to within 0.04%.
+- *Scope.* Measured under BM25, the retriever generation uses. The dense
+  arms were not re-measured; the collapse is a property of chunk text and
+  varies by less than 0.0003 across six chunkings.
+
 ### Risk raised: the headline finding may be small
 
 Both prompt strategies refused the test question, so the abstention

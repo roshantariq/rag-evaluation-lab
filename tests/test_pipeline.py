@@ -105,6 +105,17 @@ class TestPromptStrategies:
     def test_empty_retrieval_is_handled(self):
         assert "(no passages retrieved)" in build_prompt("q", [], "abstain")[1]
 
+    def test_long_passage_is_sent_whole(self):
+        # The longest chunk in the index is 2,718 characters; a hidden
+        # 2,000-character cap once cut 62.8% of them.
+        long = Hit("idL", "paperL", " ".join(["word"] * 2000) + " ANSWER")
+        _, user = build_prompt("q", [long], "abstain")
+        assert user.count("word") == 2000 and "ANSWER" in user
+
+    def test_strategies_share_the_user_message(self):
+        users = {build_prompt("q", HITS, s)[1] for s in ("naive", "abstain", "abstain_confidence")}
+        assert len(users) == 1
+
 
 class TestPipeline:
     class StubRetriever:
