@@ -14,7 +14,9 @@ reranking) is null: +0.079 with a CI touching zero, BM25 stays the
 baseline, reranking carried forward as exploratory. Sweep 4 sets generation k to 20:
 every step to 20 still adds evidence. The chunk-quality filter is null at
 0.3, 0.4 and 0.5: under BM25, low-prose chunks hold at most 2.2% of top-10
-slots. Next: section-aware, recursive and semantic chunkers.
+slots. Section-aware, recursive and semantic chunkers, size-matched to
+fixed_512, are all not separable from it and all below it (−0.069 to
+−0.020); fixed_512 stays. Next: the end-of-phase replication.
 
 ---
 
@@ -1917,6 +1919,145 @@ several on the gold set is the sweep 3 rule.
   Leaderboard: <https://huggingface.co/spaces/mteb/leaderboard>
 - Vectara blog summary of Qu et al. (by the same team).
   <https://vectara.com/blog/is-semantic-chunking-worth-the-computational-cost>
+
+### Chunker sweep — section-aware, recursive, semantic: NULL, all below fixed_512
+
+**What it closes.** The build plan's chunking axis, which until now was
+covered only by chunk size because one chunker existed. Protocol:
+`docs/chunker-protocol.md`, committed with the chunkers, chunk sets,
+harness option, decision script and tests in `a54297a`, before any
+chunker run.
+
+**Built.**
+
+- `rageval/chunking/strategies.py`: section-aware, recursive (with a
+  sentence level, because this extraction keeps few line breaks) and
+  semantic chunkers. Each differs from `fixed_512` only in where cuts
+  fall. All cut between words, so span provenance holds by construction,
+  and all tile the document. `chunk_document` now dispatches on the
+  strategy prefix; every `fixed_*` config is unchanged (rebuilding
+  `fixed_512` reproduces the index's 2,938 chunk IDs exactly).
+- Semantic boundaries: sentences embedded with `bge-large-en-v1.5`, cut at
+  the largest adjacent distance inside a 0.5–1.5× size window. 32,992
+  segments, none over the embedder's input limit.
+- `23_build_chunks.py` writes each chunk set as a committed span table,
+  checks tiling on all 130 papers, and reports size against `fixed_512`.
+  Semantic cuts come from GPU embeddings; two independent builds were
+  identical, but the committed spans are the reference.
+- `10_eval_retrieval.py --chunks <name>` scores a chunk set under BM25.
+  **Verified equivalent to the collection path**: `fixed_512` written as a
+  chunk set and scored this way reproduced `retrieval_bm25.csv` cell for
+  cell.
+- The decision table moved to `rageval.evaluation.decision`, now shared by
+  20, 22 and 24. Scripts 20 and 22 reproduced their committed tables after
+  the change.
+
+**Size matching, corpus only.** Targets on a 10-token grid, chosen so the
+median chunk length is closest to `fixed_512`'s 2,113 characters: section
+680 (median 2,123), recursive 650 (2,118), semantic 520 (2,121). Within
+0.5%.
+
+**A bias declared in advance.** Scoring counts a span as found if any
+retrieved chunk overlaps it, so a span cut by a boundary can be found two
+ways. `fixed_512` cuts 62 of 101 gold spans; section 26, recursive 38,
+semantic 31. That favours the control. Unexplained, also recorded in
+advance: a random boundary would cut roughly 40% of spans, not 62%.
+
+**Result** — span recall, 58 questions, 101 spans, against `fixed_512`:
+
+| arm | chunks | budget 20k | delta | 95% CI | Holm p (6 pairs) | win rate | outcome |
+|---|---|---|---|---|---|---|---|
+| fixed_512 (`bm25`) | 2,938 | 0.584 | — | — | — | 68.9% | control |
+| section | 2,859 | 0.515 | −0.069 | [−0.140, **+0.000**] | 0.7108 | 1.5% | not separable |
+| recursive | 3,040 | 0.545 | −0.040 | [−0.107, +0.028] | 1.0000 | 7.9% | not separable |
+| semantic | 2,753 | 0.564 | −0.020 | [−0.075, +0.033] | 1.0000 | 21.7% | not separable |
+
+| arm | k=10 | k=20 |
+|---|---|---|
+| fixed_512 | 0.604 | 0.663 |
+| section | 0.515 (−0.089 [−0.170, −0.010]) | 0.594 (−0.069 [−0.135, +0.000]) |
+| recursive | 0.574 (−0.030 [−0.111, +0.050]) | 0.644 (−0.020 [−0.103, +0.062]) |
+| semantic | 0.584 (−0.020 [−0.082, +0.041]) | 0.673 (+0.010 [−0.049, +0.070]) |
+
+Selection stability: `fixed_512` selected in 68.9% of 4,000 half-splits,
+"leaning, not decisive"; 1,113 exact ties.
+
+**Decision: `fixed_512` stays the baseline chunking.** No chunker is
+separable from it in either direction at the budget.
+
+**Section-aware sits on the boundary of "worse".** Its upper CI bound is
+exactly +0.000: the mirror image of sweep 3, where reranking's lower
+bound was exactly 0.000. The rule is strict, so it is not separable, not
+worse. At k=10, which decides nothing, its CI excludes zero
+([−0.170, −0.010]) while McNemar-Holm does not (0.2943); script 16 calls
+that "the two instruments disagree". Its loss is concentrated in
+comparative questions (Recall@10 0.500 against 0.786 for `fixed_512`).
+Section-aware chunks put each paper's sections in separate chunks, and a
+comparative question asks about two papers at once, so a plausible
+mechanism exists, but it was not tested.
+
+**Mechanism check: is the deficit the declared bias?** For each span
+`fixed_512` found and a chunker missed at the budget, was it a span the
+fixed boundaries cut in two (two chances)?
+
+| arm | spans lost | of which cut by fixed_512 | spans gained | of which cut by fixed_512 |
+|---|---|---|---|---|
+| section | 11 | 8 | 4 | 2 |
+| recursive | 8 | 7 | 4 | 4 |
+| semantic | 6 | 3 | 4 | 4 |
+| pooled | 25 | 18 (72%) | 12 | 10 (83%) |
+
+The base rate is 61%. Lost spans lean towards fixed-cut ones, as the bias
+predicts, but gained spans lean further. The spans that move in either
+direction are the ones lying across a fixed boundary, which are unstable
+under any re-chunking. **The bias does not on its own explain the
+deficit.** This is a post-hoc diagnostic and decides nothing.
+
+c006 and c008 are among the lost spans again; they are already listed for
+a manual re-read before Phase 8.
+
+**Predictions:**
+
+| prediction | outcome |
+|---|---|
+| 1. All three not separable | **Confirmed**, with section-aware on the boundary of worse |
+| 2. No point estimate above fixed_512 by more than +0.04 | **Confirmed.** All three are below it: −0.069, −0.040, −0.020 |
+| 3. No arm reaches a 90% win rate | **Confirmed.** The control led at 68.9% |
+
+**What it means.** On this corpus and gold set, under BM25, where the
+cuts fall does not detectably change span recall at matched size, and if
+anything structure-aware cutting costs a little. That agrees with Qu et
+al. (2024), whose realistic datasets favoured fixed-size chunking, and
+with Chroma's finding that size dominates strategy. The claim that
+survives is narrow: **at matched median size, three structure-aware
+chunkers did not beat fixed windows, and the scoring rule leans towards
+fixed windows by an amount this gold set cannot measure.** The chunking
+axis is now covered by strategy as well as size.
+
+**What went wrong.** Nothing in the runs. One design gap worth recording:
+the protocol matched median chunk length but not the distribution, and
+recursive makes many short chunks (p5 464 characters against section's
+846). BM25's length normalisation treats short chunks differently, so
+recursive's result mixes cut placement with length spread. Recorded as a
+threat in the protocol; not tested.
+
+**Tables:** `chunks_section.csv`, `chunks_recursive.csv`,
+`chunks_semantic.csv` (committed with the protocol),
+`retrieval_chunk_section.csv`, `retrieval_chunk_recursive.csv`,
+`retrieval_chunk_semantic.csv`,
+`paired_bm25_chunk_section_chunk_recursive_chunk_semantic_{B20000,k10,k20}.csv`,
+`stability_bm25_chunk_section_chunk_recursive_chunk_semantic_B20000.csv`,
+`chunker_result.csv`.
+
+### Standing lesson — chunker sweep
+
+**A scoring rule can carry a preference between the arms it compares.**
+Any-overlap span scoring was chosen in Phase 4 so ground truth survives
+re-chunking, and it does. But it also rewards chunkers that cut evidence
+in two, and that was invisible until a sweep compared chunkers that cut
+evidence differently. The bias was found and declared before the run only
+because the structural facts were measured first. Measure what the
+scoring rule rewards before comparing arms that differ in exactly that.
 
 ---
 
