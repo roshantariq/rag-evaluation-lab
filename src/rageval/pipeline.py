@@ -28,6 +28,8 @@ class RAGAnswer:
     citations: list[int] = field(default_factory=list)
     cited_chunk_ids: list[str] = field(default_factory=list)
     abstained: bool = False
+    served_model: str = ""
+    finish_reason: str = ""
     prompt_tokens: int = 0
     completion_tokens: int = 0
     cached: bool = False
@@ -42,6 +44,8 @@ class RAGAnswer:
             "strategy": self.strategy,
             "k": self.k,
             "abstained": self.abstained,
+            "served_model": self.served_model,
+            "finish_reason": self.finish_reason,
             "n_citations": len(self.citations),
             "cited_chunk_ids": "|".join(self.cited_chunk_ids),
             "retrieved_chunk_ids": "|".join(h.chunk_id for h in self.hits),
@@ -143,6 +147,8 @@ class RAGPipeline:
             citations=citations,
             cited_chunk_ids=[hits[i - 1].chunk_id for i in citations],
             abstained=detect_abstention(resp.text),
+            served_model=resp.served_model,
+            finish_reason=resp.finish_reason,
             prompt_tokens=resp.prompt_tokens,
             completion_tokens=resp.completion_tokens,
             cached=resp.cached,
