@@ -55,34 +55,7 @@ import numpy as np
 import pandas as pd
 
 from rageval.config import TABLES_DIR
-
-
-def _count_spans(cell) -> set[int]:
-    """Span indices in a hit_spans cell, surviving pandas dtype guessing.
-
-    A column holding only "0" and blanks is inferred as float64, so "0"
-    arrives as 0.0 and a bare isdigit() silently counts nothing. Mirrors
-    the guard in 13_compare_runs.py and 15_selection_stability.py; three
-    copies is one too many - this belongs in rageval now.
-    """
-    if cell is None:
-        return set()
-    try:
-        if pd.isna(cell):
-            return set()
-    except (TypeError, ValueError):
-        pass
-    s = str(cell).strip()
-    if not s or s.lower() == "nan":
-        return set()
-    out = set()
-    for part in s.split(";"):
-        part = part.strip()
-        if part.endswith(".0"):
-            part = part[:-2]
-        if part.isdigit():
-            out.add(int(part))
-    return out
+from rageval.evaluation.spans import span_indices
 
 
 def binom_two_sided(b: int, c: int) -> float:
@@ -123,7 +96,7 @@ def load_run(tag: str, col: str, tables_dir: Path):
         return None
     scored = df[df["scorable"] == True]  # noqa: E712 - pandas mask
     return {
-        str(r["id"]): (int(r["n_evidence"]), _count_spans(r[col]))
+        str(r["id"]): (int(r["n_evidence"]), span_indices(r[col]))
         for _, r in scored.iterrows()
     }
 

@@ -21,36 +21,10 @@ import sys
 import pandas as pd
 
 from rageval.config import TABLES_DIR
+from rageval.evaluation.spans import count_spans
 
 # Must match retrieval_metrics.DEFAULT_BUDGETS.
 BUDGETS = (5_000, 10_000, 20_000, 40_000)
-
-
-def _count_spans(cell) -> int:
-    """Count span indices in a hit_spans cell, surviving pandas dtype guessing.
-
-    A column holding only "0" and blanks is inferred as float64, so "0"
-    comes back as 0.0. Counting with a bare isdigit() then silently returns
-    zero for every row - which is exactly the bug this guards against.
-    """
-    if cell is None:
-        return 0
-    try:
-        if pd.isna(cell):
-            return 0
-    except (TypeError, ValueError):
-        pass
-    s = str(cell).strip()
-    if not s or s.lower() == "nan":
-        return 0
-    n = 0
-    for part in s.split(";"):
-        part = part.strip()
-        if part.endswith(".0"):
-            part = part[:-2]
-        if part.isdigit():
-            n += 1
-    return n
 
 
 def span_recall(df: pd.DataFrame, k: int) -> float | None:
@@ -64,7 +38,7 @@ def span_recall(df: pd.DataFrame, k: int) -> float | None:
     if col not in df.columns:
         return None
     scored = df[df["scorable"] == True]  # noqa: E712 - pandas mask
-    hit = sum(_count_spans(c) for c in scored[col])
+    hit = sum(count_spans(c) for c in scored[col])
     total = int(scored["n_evidence"].sum())
     return hit / total if total else None
 
@@ -74,7 +48,7 @@ def span_recall_at_budget(df: pd.DataFrame, budget: int) -> float | None:
     if col not in df.columns:
         return None
     scored = df[df["scorable"] == True]  # noqa: E712
-    hit = sum(_count_spans(c) for c in scored[col])
+    hit = sum(count_spans(c) for c in scored[col])
     total = int(scored["n_evidence"].sum())
     return hit / total if total else None
 

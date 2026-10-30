@@ -65,34 +65,7 @@ import numpy as np
 import pandas as pd
 
 from rageval.config import TABLES_DIR
-
-
-def _count_spans(cell) -> int:
-    """Count span indices in a hit_spans cell, surviving pandas dtype guessing.
-
-    A column holding only "0" and blanks is inferred as float64, so "0" comes
-    back as 0.0.  Counting with a bare isdigit() then silently returns zero
-    for every row.  This mirrors the guard in 13_compare_runs.py; if a third
-    script needs it, hoist it into rageval rather than copying again.
-    """
-    if cell is None:
-        return 0
-    try:
-        if pd.isna(cell):
-            return 0
-    except (TypeError, ValueError):
-        pass
-    s = str(cell).strip()
-    if not s or s.lower() == "nan":
-        return 0
-    n = 0
-    for part in s.split(";"):
-        part = part.strip()
-        if part.endswith(".0"):
-            part = part[:-2]
-        if part.isdigit():
-            n += 1
-    return n
+from rageval.evaluation.spans import count_spans
 
 
 def load_run(tag: str, col: str, tables_dir: Path) -> pd.DataFrame | None:
@@ -110,7 +83,7 @@ def load_run(tag: str, col: str, tables_dir: Path) -> pd.DataFrame | None:
         {
             "question_type": scored["question_type"].to_numpy(),
             "n_evidence": scored["n_evidence"].astype(int).to_numpy(),
-            "hits": [_count_spans(c) for c in scored[col]],
+            "hits": [count_spans(c) for c in scored[col]],
         },
         index=pd.Index(scored["id"].to_numpy(), name="id"),
     )

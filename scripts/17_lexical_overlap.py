@@ -55,28 +55,7 @@ from rageval.evaluation.gold import load_gold
 from rageval.evaluation.retrieval_metrics import is_scorable
 from rageval.retrieve.bm25 import tokenize
 from rageval.store.chroma_store import ChromaStore
-
-
-def _count_spans(cell) -> set[int]:
-    """Span indices from a hit_spans cell, surviving pandas dtype guessing."""
-    if cell is None:
-        return set()
-    try:
-        if pd.isna(cell):
-            return set()
-    except (TypeError, ValueError):
-        pass
-    s = str(cell).strip()
-    if not s or s.lower() == "nan":
-        return set()
-    out = set()
-    for part in s.split(";"):
-        part = part.strip()
-        if part.endswith(".0"):
-            part = part[:-2]
-        if part.isdigit():
-            out.add(int(part))
-    return out
+from rageval.evaluation.spans import span_indices
 
 
 def build_idf(texts) -> tuple[dict[str, float], int]:
@@ -139,7 +118,7 @@ def load_hits(tag: str, col: str, tables_dir: Path):
         print(f"  {tag}: no column {col}", file=sys.stderr)
         return None
     scored = df[df["scorable"] == True]  # noqa: E712
-    return {str(r["id"]): (int(r["n_evidence"]), _count_spans(r[col]))
+    return {str(r["id"]): (int(r["n_evidence"]), span_indices(r[col]))
             for _, r in scored.iterrows()}
 
 
