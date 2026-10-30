@@ -18,6 +18,12 @@ the ledger. Other tables count: scripts 13 to 28 read them as inputs.
 
 Every script that writes a table calls record(); there is one copy of this
 logic, as with rageval.evaluation.spans.
+
+Tables written before the ledger existed carry one "retrofit" row each:
+the regenerating command where it is on record or was confirmed by
+re-running, otherwise "unknown", and the commit, flag and gold hash always
+"unknown". A plausible commit inferred after the fact would fabricate
+provenance in the one file whose job is to establish it.
 """
 
 from __future__ import annotations
@@ -34,7 +40,7 @@ from rageval.config import PROJECT_ROOT
 
 LEDGER_NAME = "provenance.csv"
 COLUMNS = ("table", "command", "git_sha", "dirty", "dirty_paths",
-           "gold_files", "gold_sha256", "timestamp", "source")
+           "gold_files", "gold_sha256", "timestamp", "source", "note")
 UNKNOWN = "unknown"
 MAX_DIRTY_PATHS = 20
 
@@ -57,19 +63,21 @@ def _git(*args: str) -> str | None:
 
 
 def tree_state(exclude: Iterable[Path] = ()) -> tuple[str, str, str]:
-    """(commit, dirty, dirty paths) for the working tree, ignoring `exclude`."""
+    """(commit, dirty, dirty paths) for the working tree, ignoring `exclude`.
+
+    Tracked changes come from `git diff HEAD`, which compares content after
+    the repo's eol=lf normalisation, not from `git status`, which also flags
+    a file rewritten with CRLF endings and identical content. On Windows
+    pandas writes CRLF, so every re-run would otherwise mark the tree dirty.
+    """
     sha = _git("rev-parse", "HEAD")
-    status = _git("status", "--porcelain", "--untracked-files=all")
-    if sha is None or status is None:
+    changed = _git("diff", "HEAD", "--name-only")
+    untracked = _git("ls-files", "--others", "--exclude-standard")
+    if sha is None or changed is None or untracked is None:
         return UNKNOWN, UNKNOWN, ""
     skip = {_rel(p) for p in exclude}
-    paths = []
-    for line in status.splitlines():
-        path = line[3:].strip().strip('"')
-        if " -> " in path:                       # rename: the new name is what exists
-            path = path.split(" -> ", 1)[1].strip('"')
-        if path not in skip:
-            paths.append(path)
+    paths = [p.strip().strip('"') for p in (changed + untracked).splitlines()]
+    paths = [p for p in dict.fromkeys(paths) if p and p not in skip]
     shown = paths[:MAX_DIRTY_PATHS]
     if len(paths) > MAX_DIRTY_PATHS:
         shown.append(f"+{len(paths) - MAX_DIRTY_PATHS} more")
@@ -104,6 +112,7 @@ def record(tables: Iterable[Path], gold: Iterable[Path] = (),
         "gold_sha256": ";".join(file_sha256(g) for g in gold) or "n/a",
         "timestamp": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "source": "recorded",
+        "note": "",
     }
     for table in tables:
         ledger = table.parent / LEDGER_NAME
