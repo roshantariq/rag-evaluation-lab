@@ -172,6 +172,30 @@ either way, so splitting changes nothing, with one exception, now closed:
    a NaN is never written as a score. A cap reached halfway through would
    otherwise look like a finished run with blank scores.
 
+### Amendment, 30 October 2026, after the dry run and before the full run: judge test-retest
+
+*Owner-approved. Adds a measurement; no criterion, threshold, prompt or
+question changes.*
+
+The dry run showed the judge giving opposite verdicts to near-identical
+statements (build log, Phase 7). To put a number on that before any
+strategy comparison of faithfulness exists, each of the 12 judged dry-run
+answers is judged **once more**, with the same pinned judge, the same text
+and the same contexts, bypassing the checkpoint. Reported:
+
+- per answer, the two scores and |Δ|; the mean and maximum |Δ|;
+- how often the two judgings split the answer into the same number of
+  statements;
+- where the statements are identical text, the share of verdicts that
+  agree.
+
+**Use.** Descriptive only. The secondary faithfulness results are reported
+next to the mean test-retest |Δ|, and a strategy difference in mean
+faithfulness smaller than it is described as within judge noise. Twelve
+answers give a rough figure, and it is reported as rough. It decides
+nothing, and it is measured on the dry run only, before any full-run
+faithfulness score exists, so the comparison cannot be shaped by it.
+
 ## Labelling
 
 Every answer to an unanswerable question (16 × 3 = 48) is labelled by hand.
