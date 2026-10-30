@@ -40,9 +40,16 @@ retrieval:
   mode: bm25              # dense | bm25 | hybrid  (was dense until sweep 2)
   k: 20                   # generation context; chosen by sweep 4
 
+# Models are pinned to dated versions, not aliases, so a run that stops at
+# the spend cap and resumes later queries the same model (Phase 7 protocol,
+# amendment). Versions confirmed against the provider's model list,
+# 30 Oct 2026; each answer also records the version that actually replied.
 generation:
   provider: openai          # or "azure"
-  model: gpt-4o-mini
+  model: gpt-4o-mini-2024-07-18
   temperature: 0.0          # determinism matters: ablations must be comparable
   max_tokens: 700
   prompt_strategy: abstain  # naive | abstain | abstain_confidence
+
+evaluation:
+  judge_model: gpt-4o-2024-08-06   # RAGAS faithfulness judge; not the generator
