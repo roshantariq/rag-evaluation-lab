@@ -1,0 +1,13 @@
+id,strategy,evidence,key,n_statements,n_supported,faithfulness,judge_served_model
+a001,naive,incomplete,417ee788bfa11c1c4c45,2,2,1.0,gpt-4o-2024-08-06
+a001,abstain,incomplete,7e6f5344d794692b5a06,2,2,1.0,gpt-4o-2024-08-06
+a001,abstain_confidence,incomplete,e374fb558423b3c85af8,2,2,1.0,gpt-4o-2024-08-06
+c001,naive,incomplete,fb7eb7836cd5d717bb40,7,7,1.0,gpt-4o-2024-08-06
+c001,abstain,incomplete,9801aa70e66863b3b7f7,6,6,1.0,gpt-4o-2024-08-06
+c001,abstain_confidence,incomplete,12383ce4939c8944e566,7,3,0.42857142857142855,gpt-4o-2024-08-06
+f001,naive,complete,1352b02f75489385a552,7,6,0.8571428571428571,gpt-4o-2024-08-06
+f001,abstain,complete,ddd4c4b0e67cb80ec9dd,4,4,1.0,gpt-4o-2024-08-06
+f001,abstain_confidence,complete,4731e688f8685298d56c,8,6,0.75,gpt-4o-2024-08-06
+m001,naive,complete,0a51656b0f0fff09ea7d,7,6,0.8571428571428571,gpt-4o-2024-08-06
+m001,abstain,complete,92564b1a82834d3c0608,8,6,0.75,gpt-4o-2024-08-06
+m001,abstain_confidence,complete,3a84e776fd72f8d5912c,8,5,0.625,gpt-4o-2024-08-06

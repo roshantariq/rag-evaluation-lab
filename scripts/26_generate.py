@@ -275,12 +275,13 @@ def run_judge(out, gold, texts, judge_model, budget, faith_path, dry_run, proble
           f"budget {budget:,} tokens")
     records, new = [], 0
     for _, r in todo.iterrows():
-        key = fa.answer_key(r["id"], r["strategy"], r["answer"], judge_model)
+        judged = fa.strip_confidence(r["answer"])   # key on the text actually judged
+        key = fa.answer_key(r["id"], r["strategy"], judged, judge_model)
         if key not in ckpt:
             contexts = [texts[c] for c in r["retrieved_chunk_ids"].split("|")]
             try:
                 j = asyncio.run(fa.judge(metric, key, questions[r["id"]].question,
-                                         r["answer"], contexts, meter))
+                                         judged, contexts, meter))
             except Exception as e:          # stop; nothing partial is written
                 print(f"\nJUDGING STOPPED at {r['id']} {r['strategy']}: "
                       f"{type(e).__name__}: {e}")

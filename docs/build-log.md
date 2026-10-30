@@ -2260,6 +2260,75 @@ match `retrieval_bm25.csv` in all 116 comparisons. Generation and the
 harness now retrieve identically, so Phase 6's numbers describe the
 context Phase 7's generator will see.
 
+### Protocol, pinning and the dry run (30 October 2026)
+
+**Pre-registered** in `docs/phase7-protocol.md` (`e0162c6`), before any
+answer existed: generator `gpt-4o-mini`, BM25 k = 20, three strategies ×
+74 questions, a two-label rubric for the 48 unanswerable answers labelled
+blind by Claude and reviewed in full by the owner, a Floor outcome
+(`naive` hallucinates on ≤ 2 of 16), the complete/incomplete split, and
+judge `gpt-4o` (owner's choice, to avoid the generator grading itself).
+
+**Amended before any answer** for a $10 hard spend cap: generator and
+judge pinned to dated versions (`gpt-4o-mini-2024-07-18`,
+`gpt-4o-2024-08-06`, confirmed against the provider's model list), the
+served version recorded on every answer and judgment, a token budget that
+refuses a call before it is made, and judging that checkpoints each score
+and stops on any failure rather than writing NaN. Tests prove the budget
+stop survives both `ChatOpenAI` and the RAGAS wrapper without a network
+call.
+
+**Dry run**, a001, c001, f001, m001, u001 × 3 strategies
+(`generation_answers_dryrun.csv`, `generation_faithfulness_dryrun.csv`):
+
+| check | result |
+|---|---|
+| 1 prompt isolation | system prompts nest; user message and hits identical across strategies, 5/5 |
+| 2 retrieval identity | 12/12 scorable rows match `retrieval_bm25.csv` at k = 20 |
+| 4 cut off at `max_tokens` | 0 of 15 (longest answer 120 tokens) |
+| 5 served versions | one generator version, one judge version |
+| 3 determinism, `abstain` re-called uncached | **2/5 identical**, then **4/5** on a second dry-run pass |
+
+Determinism differences were rewordings of the same content ("using a
+method described in the literature" dropped or reworded). This is the
+declared one-sample-per-cell threat, now measured: temperature 0 on this
+API reproduces an answer word for word about half to four-fifths of the
+time.
+
+*Cost, measured:* 15 answers 153k input tokens, ~$0.02; projected full
+generation 2.28M tokens, ~$0.35. Judging ~$0.032 per answer, at most
+~$5.7 for all 174 scorable answers. Dry run spent ≈ $0.57 including the
+determinism calls and a re-judge.
+
+**Defect found and fixed: the judge scored the confidence line as a
+claim.** RAGAS split `abstain_confidence`'s trailing "Confidence: high"
+into the statement "the confidence level is high" and marked it
+unsupported, a penalty that only one strategy pays (a001 2/3, f001 8/9 on
+the first pass). The line is a self-rating, not a claim about the papers,
+and labelling already strips it. `strip_confidence` now removes it before
+judging, and the checkpoint key is the text actually judged, so the three
+affected answers were re-judged. A mechanical defect, fixed as the
+protocol allows; no prompt, threshold or rubric changed.
+
+**Observed, not fixed: the judge is noisy at the level of single
+statements.** Near-identical statements against the same context got
+opposite verdicts in different answers or passes. f001's "the method
+involves estimating the motion of clouds" was supported on the first
+judging of one answer and unsupported on the re-judge of its stripped
+text; m001's "quadratic memory complexity" was supported under `abstain`
+and not under `abstain_confidence`. c001 `abstain_confidence` scored 3/7
+on two passes against 6/6 and 7/7 for statements that differ only in
+wording. With ~10k-token contexts judged in one batch, a per-answer
+faithfulness score carries visible judge variance. It is a secondary
+measure and the paired design shares that noise across strategies, but a
+small faithfulness difference should not be read as a strategy effect.
+
+**Blinding preserved.** Claude has read the four answerable dry-run
+questions' answers and judge statements (above) and has **not** read the
+text of the three u001 answers, which will reappear in the blind labelling
+worksheet. Only the regex's first-pass flag for them appeared in the run
+output.
+
 ---
 
 ## Plan amendments

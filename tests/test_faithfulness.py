@@ -117,3 +117,18 @@ def test_budget_stop_survives_the_ragas_wrapper(monkeypatch):
     with pytest.raises(fa.JudgeBudgetExceeded):
         asyncio.run(fa.judge(metric, "k", "What is FSS?", "FSS is a score [1].", ["ctx"], meter))
     assert meter.calls == 0
+
+
+@pytest.mark.parametrize("answer", [
+    "It takes two days [2]. Confidence: high",
+    "It takes two days [2]. \n\nConfidence: high",
+    "It takes two days [2].\nconfidence: Medium.",
+    "It takes two days [2].\nConfidence: low  ",
+])
+def test_confidence_line_is_not_judged(answer):
+    assert fa.strip_confidence(answer) == "It takes two days [2]."
+
+
+def test_answers_without_the_line_are_untouched():
+    text = "Confidence intervals are reported [3]. The score is high [4]."
+    assert fa.strip_confidence(text) == text
