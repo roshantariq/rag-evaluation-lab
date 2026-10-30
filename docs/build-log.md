@@ -1814,6 +1814,110 @@ mostly gone with it. Measuring the opportunity before the effect is what
 let a null be read as "nothing to fix" rather than "the filter does not
 work".
 
+### Literature check, before the chunker sweep
+
+Done before the chunkers or their protocol were written, so it could
+change the design. Three questions: does chunking strategy matter at
+equal size, which embedder should place semantic boundaries, and what
+can this gold set detect.
+
+**1. Semantic chunking rarely beats fixed-size chunking on real
+documents.** Qu, Tu & Bao (2024) compare fixed-size, breakpoint and
+clustering semantic chunkers on document retrieval, evidence retrieval
+and answer generation:
+
+- On realistic, non-stitched documents fixed-size chunking matched or
+  beat semantic chunking (HotpotQA document retrieval, F1@5: fixed-size
+  90.59, best).
+- On evidence retrieval, fixed-size was best on 3 of 5 datasets; the
+  authors call the differences "minimal".
+- Answer quality was essentially identical (BERTScore 0.65 for all three
+  chunkers on ExpertQA, 0.76 on DelucionQA).
+- Semantic chunking won clearly only on artificial documents stitched
+  from unrelated short texts, which creates easy topic boundaries
+  (Miracl 81.89 vs 69.45, NQ 63.93 vs 43.79).
+- "The impact of chunking strategy was often overshadowed by other
+  factors, such as the quality of embeddings." That refers to the
+  embedder doing the *retrieval*, not the one placing boundaries.
+- Two of the three authors work at Vectara, which sells RAG products.
+  No independent replication was found.
+
+**2. Chroma's report finds size dominates strategy.** Smith & Troynikov
+(2024), token-level recall with `text-embedding-3-large` and 5 retrieved
+chunks:
+
+- Recursive splitting against plain token windows at matched size: 89.5
+  vs 89.2 (400 tokens, no overlap) and 88.1 vs 87.0 (200 tokens).
+- The default Kamradt semantic chunker produced chunks of mean ~660
+  tokens and the lowest recall in the table (83.6). Capped to smaller
+  chunks (mean ~397) it rose to 87.1. "Recall improved despite the mean
+  chunk length dropping."
+- Its breakpoint threshold "is a relative metric and can lead to larger
+  chunks in bigger corpora." A semantic chunker's size is a side effect
+  of its threshold unless it is controlled.
+- This is sweep 1's finding from another direction: comparing chunkers
+  that make different-sized chunks measures size, not strategy.
+
+**3. Candidate boundary embedders are close on the relevant task.**
+Placing a boundary asks whether two adjacent sentences are similar,
+which is what STS measures. MTEB English scores:
+
+| model | params | STS | clustering | licence |
+|---|---|---|---|---|
+| all-MiniLM-L6-v2 (the index's model) | 22M | ~78.9 | ~42.4 | Apache 2.0 |
+| all-mpnet-base-v2 | 110M | 80.28 | 43.69 | Apache 2.0 |
+| bge-base-en-v1.5 | 110M | 82.40 | 45.77 | MIT |
+| **bge-large-en-v1.5** | **335M** | **83.11** | **46.08** | **MIT** |
+| gte-large | 335M | 83.35 | 46.84 | MIT |
+
+All rows except MiniLM come from the table on the BGE model card, a
+vendor's table. MTEB scores are reproducible with the open benchmark
+code, but the source is recorded as vendor-published. The MiniLM figures
+come from a different MTEB snapshot and are approximate. The spread from
+MiniLM to the best is about four STS points. No source measures whether
+the boundary embedder changes retrieval.
+
+**Decision: `BAAI/bge-large-en-v1.5` places semantic boundaries.** A
+stronger embedder probably changes few boundaries. It is chosen because
+it removes the objection that a null came from a weak model, at almost
+no cost: it is an existing `sentence-transformers` dependency, a one-off
+weights download, and seconds of GPU time. It is MIT-licensed and tops
+the table on overall average. Qu et al. also used it, which keeps the
+setup comparable. gte-large is equally defensible; the gap is within
+benchmark noise. Choosing from published results rather than by trying
+several on the gold set is the sweep 3 rule.
+
+**Consequences for the design:**
+
+- **Each chunker's size parameters are set to reproduce `fixed_512`'s
+  median chunk length, computed on the corpus alone.** The gold set plays
+  no part. The sweep then tests where cuts fall, not how big chunks are.
+- **The likely outcome is null, and the protocol will say so.** Published
+  differences at matched size are 1–2 recall points; this gold set
+  detects about 8 (the power limit, §7 of CLAUDE.md). The sweep still
+  closes the build plan's chunking-strategy gap, which so far covers only
+  chunk size, and an 8-point structural effect on scientific papers
+  would be a real finding.
+- **All three chunkers are built** (owner's decision, 30 October 2026):
+  section-aware, recursive and semantic. A null across three strategies
+  is a stronger statement than a null on one.
+
+**References**
+
+- Qu, R., Tu, R. & Bao, F. (2024). *Is Semantic Chunking Worth the
+  Computational Cost?* arXiv:2410.13070.
+  <https://arxiv.org/abs/2410.13070>
+- Smith, B. & Troynikov, A. (2024). *Evaluating Chunking Strategies for
+  Retrieval.* Chroma technical report.
+  <https://www.trychroma.com/research/evaluating-chunking>
+- BAAI. *bge-base-en-v1.5* model card, MTEB English table (vendor-
+  published). <https://huggingface.co/BAAI/bge-base-en-v1.5>
+- Muennighoff, N., Tazi, N., Magne, L. & Reimers, N. (2023). *MTEB:
+  Massive Text Embedding Benchmark.* EACL 2023. arXiv:2210.07316.
+  Leaderboard: <https://huggingface.co/spaces/mteb/leaderboard>
+- Vectara blog summary of Qu et al. (by the same team).
+  <https://vectara.com/blog/is-semantic-chunking-worth-the-computational-cost>
+
 ---
 
 ## Plan amendments
