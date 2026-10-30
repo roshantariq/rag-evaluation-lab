@@ -62,11 +62,50 @@ regenerating.
 Regenerate from the project root so the editable line stays `-e .`, and
 check that the result is UTF-8 with LF line endings.
 
+## torch: CUDA 12.8 wheel (resolved 31 October 2026)
+
+**Symptom.** The RTX 5070 is Blackwell (sm_120) and needs a cu128 or later
+torch wheel. A cu121 wheel installs cleanly and reports `cuda True`, then
+fails with "no kernel image is available": the obvious check passes.
+
+**What is installed.** `torch 2.11.0+cu128` (CUDA 12.8), on Python 3.11.9,
+an RTX 5070 Ti Laptop GPU; `torch.cuda.is_available()` is True and a GPU op
+succeeds. Its `dist-info` is dated 27 August 2026, 20:42, the day after the
+lockfile was first written.
+
+**Why the lockfile was stale.** It pinned `torch==2.13.0` with no CUDA
+suffix, recorded before the CUDA wheel was installed. The cu128 index
+(`https://download.pytorch.org/whl/cu128`) tops out at 2.11.0, so a cu128
+2.13.0 never existed; the pin described a CPU build this environment does
+not have. It was the only line of 215 that disagreed with `pip freeze`.
+
+**Fix.** The lockfile now pins the installed wheel and names its index:
+
+```
+--extra-index-url https://download.pytorch.org/whl/cu128
+torch==2.11.0+cu128; sys_platform != "darwin"
+torch==2.11.0; sys_platform == "darwin"
+```
+
+macOS has no CUDA wheels, so it gets the plain build; that line is
+untested. `pip install --dry-run --no-deps -r requirements.lock.txt`
+against this environment reports every pin satisfied. A fresh install
+from the lockfile is Phase 9's check, not yet run. `pip freeze` drops
+the index line and the markers, so re-add both after regenerating, as for
+`pywin32`.
+
 ## Open
 
-- **CUDA wheel.** The RTX 5070 is Blackwell (sm_120) and needs a cu128 or
-  later torch wheel. A cu121 wheel installs cleanly and reports
-  `cuda True`, then fails with "no kernel image is available". Whether the
-  cu128 wheel was ever installed is unresolved (CLAUDE.md §9). The lockfile
-  pins `torch==2.13.0` with no CUDA suffix. When this is settled, record
-  the wheel and index URL here.
+- **Embedding cache provenance.** `.cache/embeddings.sqlite` is keyed only
+  on `hash(model, text)`, with no record of device, torch version or date
+  per vector. The Phase 5 dense baseline was committed at 20:11 on
+  27 August, 31 minutes *before* the cu128 wheel was installed, so its
+  vectors were computed without CUDA, under whatever torch was present
+  then. Later dense work may have reused those cached vectors or added
+  GPU-computed ones; the cache cannot say which. CPU and GPU vectors agree
+  to about 1e-6, not bit for bit, which can at most reorder near-ties. It
+  affects only dense arms (the baseline, chunk256/1024, hybrid,
+  `para_dense`, the oracle tables); BM25, which every later decision used,
+  reads no embeddings, and the reranker scores without the cache.
+  Clearing the cache and rebuilding settles it, and needs the owner's
+  approval (CLAUDE.md §14).
