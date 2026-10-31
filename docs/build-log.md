@@ -3,8 +3,7 @@
 Running record of decisions, defects and measured results. Phase numbering
 follows the build plan. Newest phase last.
 
-**Status (31 October 2026):** Phases 0–7 complete; Phase 8 (write-up)
-in progress, Phase 9 (fresh-clone check, `v1.0`) to follow. Retrieval:
+**Status (31 October 2026):** Phases 0–8 complete; Phase 9 (fresh-clone check, `v1.0`) to follow. Retrieval:
 BM25 over fixed_512 chunks replaced dense in sweep 2; every later sweep
 (reranking, chunk filter, chunkers, replication) was null, and the k sweep
 set generation to k = 20. BM25's lead is largely an authoring artifact
@@ -2905,9 +2904,12 @@ tested. A README draft listed scripts 13 and 14 among those re-run to
 identical tables; they print and write no table, and the list was
 corrected before commit.
 
-**Not done here.** The build plan's Phase 8 definition is not in this
-repository, so this phase was scoped from CLAUDE.md §2 and §9. The owner
-reviews the README before Phase 8 closes.
+**Scope.** The build plan's Phase 8 definition is not in this
+repository, so this phase was scoped from CLAUDE.md §2 and §9.
+
+**Closed 31 October 2026.** The owner reviewed and approved the README.
+The OpenAI spend was reconciled against the provider dashboard by the
+owner; it stayed under the hard cap.
 
 ### Standing lesson — Phase 8
 
