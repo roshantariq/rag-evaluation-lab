@@ -50,6 +50,11 @@ def main() -> int:
     overlap = cfg["chunking"].get("overlap_tokens", 0)
     model = cfg["embedding"]["model"]
     collection = cfg["index"]["collection"]
+    ef_search = cfg["index"].get("ef_search")
+    if ef_search is None:
+        print(f"{args.config} declares no index.ef_search. It is persisted at creation, "
+              "and a library default is not a choice.")
+        return 1
 
     docs = load_documents(args.skip_degraded)
     if args.limit:
@@ -61,7 +66,7 @@ def main() -> int:
     print(f"Documents      {len(docs)}")
     print(f"Chunking       {strategy}  target={target} overlap={overlap}")
     print(f"Embedding      {model}")
-    print(f"Collection     {collection}\n")
+    print(f"Collection     {collection}  (ef_search {ef_search})\n")
 
     count_tokens = get_token_counter()
     t0 = time.perf_counter()
@@ -89,6 +94,7 @@ def main() -> int:
     print(f"Embedded in {time.perf_counter() - t0:.1f}s  shape={vectors.shape}\n")
 
     store = ChromaStore(CHROMA_DIR, collection)
+    store.declared_ef_search = ef_search
     store.reset()
     store.add_chunks(chunks, vectors)
     print(f"\nIndex built: {store.count()} chunks in collection '{collection}'")

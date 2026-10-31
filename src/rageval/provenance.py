@@ -19,6 +19,14 @@ the ledger. Other tables count: scripts 13 to 28 read them as inputs.
 Every script that writes a table calls record(); there is one copy of this
 logic, as with rageval.evaluation.spans.
 
+`ef_search` is the HNSW search depth of every dense query the run made
+(Chroma's approximate search; see rageval.store.chroma_store), "n/a" when
+it made none. A table derived from other tables (paired tests, stability,
+results) made no query and reads "n/a"; its inputs' rows carry the value.
+Rows written before the column existed were annotated on 31 Oct 2026:
+"100" for every table produced by a dense query, Chroma 1.5.9's default,
+which every collection persisted from creation until then.
+
 Tables written before the ledger existed carry one "retrofit" row each:
 the regenerating command where it is on record or was confirmed by
 re-running, otherwise "unknown", and the commit, flag and gold hash always
@@ -40,7 +48,7 @@ from rageval.config import PROJECT_ROOT
 
 LEDGER_NAME = "provenance.csv"
 COLUMNS = ("table", "command", "git_sha", "dirty", "dirty_paths",
-           "gold_files", "gold_sha256", "timestamp", "source", "note")
+           "gold_files", "gold_sha256", "timestamp", "source", "note", "ef_search")
 UNKNOWN = "unknown"
 MAX_DIRTY_PATHS = 20
 
@@ -97,8 +105,12 @@ def command_line(argv: Sequence[str] | None = None) -> str:
 
 
 def record(tables: Iterable[Path], gold: Iterable[Path] = (),
-           argv: Sequence[str] | None = None) -> None:
-    """Append one ledger row per table, in the ledger beside each table."""
+           argv: Sequence[str] | None = None, ef_search: int | str | None = None) -> None:
+    """Append one ledger row per table, in the ledger beside each table.
+
+    `ef_search`: the HNSW search depth the run's dense queries used, None
+    when it made no dense query.
+    """
     tables = [Path(t) for t in tables]
     gold = [Path(g) for g in gold]
     ledgers = {t.parent / LEDGER_NAME for t in tables}
@@ -113,10 +125,17 @@ def record(tables: Iterable[Path], gold: Iterable[Path] = (),
         "timestamp": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "source": "recorded",
         "note": "",
+        "ef_search": "n/a" if ef_search is None else str(ef_search),
     }
     for table in tables:
         ledger = table.parent / LEDGER_NAME
         new = not ledger.exists()
+        if not new:
+            with open(ledger, encoding="utf-8", newline="") as fh:
+                header = tuple(next(csv.reader(fh), ()))
+            if header != COLUMNS:
+                raise ValueError(f"{ledger} has columns {header}, expected {COLUMNS}; "
+                                 "appending would misalign every field")
         with open(ledger, "a", newline="", encoding="utf-8") as fh:
             writer = csv.DictWriter(fh, fieldnames=COLUMNS)
             if new:

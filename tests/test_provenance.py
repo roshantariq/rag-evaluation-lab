@@ -102,3 +102,21 @@ def test_record_appends_beside_the_table(tmp_path, monkeypatch):
     assert first["command"].endswith('--tag "two words"')
     assert first["source"] == "recorded" and first["note"] == ""
     assert rows[2]["gold_files"] == "n/a" and rows[2]["gold_sha256"] == "n/a"
+
+
+def test_ef_search_is_recorded_and_defaults_to_na(tmp_path, monkeypatch):
+    monkeypatch.setattr(pv, "_git", fake_git("abc123\n", ""))
+    a, b = tmp_path / "a.csv", tmp_path / "b.csv"
+    pv.record([a], argv=["scripts/x.py"], ef_search=500)
+    pv.record([b], argv=["scripts/x.py"])
+    rows = read_ledger(tmp_path / "provenance.csv")
+    assert [r["ef_search"] for r in rows] == ["500", "n/a"]
+
+
+def test_a_ledger_with_other_columns_is_refused(tmp_path, monkeypatch):
+    # appending a row with a column the header lacks would shift every field
+    monkeypatch.setattr(pv, "_git", fake_git("abc123\n", ""))
+    old = tmp_path / "provenance.csv"
+    old.write_text(",".join(pv.COLUMNS[:-1]) + "\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="misalign"):
+        pv.record([tmp_path / "a.csv"], argv=["scripts/x.py"])

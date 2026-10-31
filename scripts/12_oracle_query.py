@@ -82,10 +82,19 @@ def main() -> int:
     with open(CONFIG_DIR / args.config, "r", encoding="utf-8") as fh:
         cfg = yaml.safe_load(fh)
 
-    store = ChromaStore(CHROMA_DIR, cfg["index"]["collection"])
+    if cfg["index"].get("ef_search") is None:
+        print(f"{args.config} declares no index.ef_search; the oracle searches HNSW at it.")
+        return 1
+    try:
+        store = ChromaStore(CHROMA_DIR, cfg["index"]["collection"],
+                            ef_search=cfg["index"]["ef_search"])
+    except ValueError as e:
+        print(f"  {e}")
+        return 1
     if store.count() == 0:
         print("Index is empty. Run scripts/03_build_index.py first.")
         return 1
+    print(f"ef_search {store.ef_search}  (declared; the collection agrees)")
     encoder = Encoder(cfg["embedding"]["model"], cache_path=EMBED_CACHE)
 
     questions = [q for q in load_gold(EVAL_DIR / "gold_questions.jsonl") if is_scorable(q)]
@@ -115,7 +124,7 @@ def main() -> int:
     out = pd.DataFrame(rows)
     out_path = TABLES_DIR / f"oracle_{args.tag}_k{args.k}.csv"
     out.to_csv(out_path, index=False)
-    record([out_path], gold=[EVAL_DIR / "gold_questions.jsonl"])
+    record([out_path], gold=[EVAL_DIR / "gold_questions.jsonl"], ef_search=store.ef_search)
 
     k = args.k
     print(f"\n{'=' * 74}\nORACLE: query = the evidence text itself  "

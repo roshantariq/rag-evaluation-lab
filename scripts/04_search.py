@@ -29,7 +29,8 @@ def main() -> int:
     with open(CONFIG_DIR / args.config, "r", encoding="utf-8") as fh:
         cfg = yaml.safe_load(fh)
 
-    store = ChromaStore(CHROMA_DIR, cfg["index"]["collection"])
+    store = ChromaStore(CHROMA_DIR, cfg["index"]["collection"],
+                        ef_search=cfg["index"].get("ef_search"))
     if store.count() == 0:
         print("Index is empty. Run scripts/03_build_index.py first.")
         return 1

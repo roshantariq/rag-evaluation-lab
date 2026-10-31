@@ -17,6 +17,7 @@ embedding:
 
 index:
   collection: baseline_fixed512_minilm
+  ef_search: 100           # HNSW search depth, persisted in the collection; declared, never a library default
 
 retrieval:
   mode: hybrid
