@@ -3,7 +3,7 @@
 Running record of decisions, defects and measured results. Phase numbering
 follows the build plan. Newest phase last.
 
-**Status (31 October 2026):** Phases 0–9 complete; the fresh-clone check reproduced extraction (130/130) and every BM25 table exactly. `v1.0` awaits the owner's merge. Retrieval:
+**Status (31 October 2026):** Phases 0–9 complete; the fresh-clone check reproduced extraction (130/130) and every BM25 table exactly. Merged to `main` and tagged `v1.0` (`6b0766c`), 31 October 2026. Retrieval:
 BM25 over fixed_512 chunks replaced dense in sweep 2; every later sweep
 (reranking, chunk filter, chunkers, replication) was null, and the k sweep
 set generation to k = 20. BM25's lead is largely an authoring artifact
