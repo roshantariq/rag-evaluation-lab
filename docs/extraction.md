@@ -57,3 +57,25 @@ One known false positive: `2008.08626v2` loses a URL query fragment
 (`ots=...&sig=...`) that is not encoded data. It has no domain, so the URL
 exemption cannot see it, and widening the exemption would start letting
 real blobs through. Retrieval value is zero; left in place deliberately.
+
+## Reproducibility (verified 31 October 2026, Phase 9)
+
+The extracted text is not committed: arXiv's default licence does not let
+third parties redistribute papers or their derived text. A clone
+regenerates it and checks it against `data/eval/interim_sha256.csv`
+(per document: the JSON file, its `text` field, and the source PDF).
+
+A throwaway clone at `ec3dd94`, with its own venv (PyMuPDF 1.28.2),
+fetched the 130 papers with `01_fetch_corpus.py --from-manifest` (130/130,
+no failures) and extracted them twice into separate directories:
+
+| comparison | files | file hash | text hash | PDF hash |
+|---|---|---|---|---|
+| run 1 vs run 2 (determinism) | 130 | 130 identical | 130 identical | n/a |
+| run 1 vs frozen manifest | 130 | 130 identical | 130 identical | 130 identical |
+| run 2 vs frozen manifest | 130 | 130 identical | 130 identical | 130 identical |
+
+No paper differs, so none is listed here. The three possible causes of a
+mismatch (arXiv serving different bytes, a PyMuPDF version change,
+non-deterministic extraction) were each testable and none occurred.
+Tables: `results/tables/extraction_check_{run1_vs_run2,run1_vs_frozen,run2_vs_frozen}.csv`.
