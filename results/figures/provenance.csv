@@ -1,0 +1,6 @@
+table,command,git_sha,dirty,dirty_paths,gold_files,gold_sha256,timestamp,source,note,ef_search
+fig1_hallucination.png,python scripts\29_figures.py,b0e0ff36f182215d840fba94e97f16a997f9ac62,False,,n/a,n/a,2026-10-31T14:43:23+00:00,recorded,,n/a
+fig2_effects.png,python scripts\29_figures.py,b0e0ff36f182215d840fba94e97f16a997f9ac62,False,,n/a,n/a,2026-10-31T14:43:23+00:00,recorded,,n/a
+fig3_paraphrase.png,python scripts\29_figures.py,b0e0ff36f182215d840fba94e97f16a997f9ac62,False,,n/a,n/a,2026-10-31T14:43:23+00:00,recorded,,n/a
+fig4_chunk_size.png,python scripts\29_figures.py,b0e0ff36f182215d840fba94e97f16a997f9ac62,False,,n/a,n/a,2026-10-31T14:43:23+00:00,recorded,,n/a
+fig5_k_curve.png,python scripts\29_figures.py,b0e0ff36f182215d840fba94e97f16a997f9ac62,False,,n/a,n/a,2026-10-31T14:43:23+00:00,recorded,,n/a
