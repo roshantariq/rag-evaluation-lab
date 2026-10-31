@@ -3,22 +3,19 @@
 Running record of decisions, defects and measured results. Phase numbering
 follows the build plan. Newest phase last.
 
-**Status:** Phases 0–5 complete. Phase 6 in progress: sweeps 1 (chunk
-size), 2 (retrieval function) and 2b (fusion) closed. Chunk size and fusion
-are null results; BM25 replaces dense retrieval as the baseline, with its
-effect size bounded by a measured authoring confound. The embedding-model
-sweep is dropped under its pre-registered condition. The paraphrase
-validity test supports the confound explanation: on rewritten
-high-overlap questions BM25's advantage vanishes. Sweep 3 (cross-encoder
-reranking) is null: +0.079 with a CI touching zero, BM25 stays the
-baseline, reranking carried forward as exploratory. Sweep 4 sets generation k to 20:
-every step to 20 still adds evidence. The chunk-quality filter is null at
-0.3, 0.4 and 0.5: under BM25, low-prose chunks hold at most 2.2% of top-10
-slots. Section-aware, recursive and semantic chunkers, size-matched to
-fixed_512, are all not separable from it and all below it (−0.069 to
-−0.020); fixed_512 stays. The end-of-phase replication finds chunk size
-null under BM25 as under dense (+0.030, interaction −0.010). **Phase 6 is
-complete.** Next: Phase 7, after its blocker (generation is dense-only).
+**Status (31 October 2026):** Phases 0–7 complete; Phase 8 (write-up)
+in progress, Phase 9 (fresh-clone check, `v1.0`) to follow. Retrieval:
+BM25 over fixed_512 chunks replaced dense in sweep 2; every later sweep
+(reranking, chunk filter, chunkers, replication) was null, and the k sweep
+set generation to k = 20. BM25's lead is largely an authoring artifact
+(paraphrase test). Generation: an explicit abstention instruction took
+hallucination on 16 adjacent-unanswerable questions from 8/16 to 0/16,
++0.500 [+0.250, +0.750]. Dense search now runs at a declared ef_search of
+500.
+
+*The status paragraph above replaces one last updated at the end of
+Phase 6, which read "Next: Phase 7, after its blocker (generation is
+dense-only)."*
 
 ---
 
@@ -2862,6 +2859,62 @@ Every parameter that shapes a result is declared in config, checked
 against the artifact it governs, and written into the provenance of
 every table it produced, including the ones written before anyone knew
 it mattered.
+
+---
+
+## Phase 8 — Analysis and write-up
+
+### Figures and README (31 October 2026)
+
+**Built.** `scripts/29_figures.py` draws five figures into
+`results/figures/` from committed tables only, and records them in a
+ledger beside them (`results/figures/provenance.csv`, rendered from a
+clean tree at `b0e0ff3`). It computes no statistic. Every interval,
+p-value and outcome is read from the table that a pre-registered script
+wrote, and span recall for the chunk-size figure goes through
+`rageval.evaluation.spans`. A figure that recomputed its numbers would be
+a second scoring path in another form.
+
+| figure | shows | source tables |
+|---|---|---|
+| `fig1_hallucination` | 16 unanswerable × 3 prompts, per question; the 3 disputed labels marked | `generation_labels`, `generation_result` |
+| `fig2_effects` | every pre-registered comparison at the 20k budget, delta and 95% CI | the `paired_*_B20000` tables, `paraphrase_result` |
+| `fig3_paraphrase` | BM25 and dense, original vs rewritten wording | `paraphrase_result` |
+| `fig4_chunk_size` | chunk size at k = 10 vs at 20k characters, dense | `retrieval_{chunk256, baseline, chunk1024}` |
+| `fig5_k_curve` | BM25 span recall, complete coverage and the rewritten subset by k | `k_sweep_curve`, `k_sweep` |
+
+The chunk-size figure reproduces the sweep 1 numbers exactly (0.347 /
+0.436 / 0.416 at k = 10; 0.455 / 0.416 / 0.287 at the budget).
+
+`README.md` is the write-up for an outside reader: the headline with its
+design reason (adjacent unanswerables) placed ahead of the number, the
+retrieval table, the paraphrase result as the reason BM25 wins, the
+chunk-size and k findings, a limitations section, and reproduction stated
+as far as it has been verified and no further. The criterion-2 wording
+recorded in the dense-reproducibility section above is in the
+limitations.
+
+**What went wrong.** Two figure captions overclaimed, and both were caught
+by looking at the rendered figure, not the code. Figure 2 first explained
+dark grey (CI excludes zero, not adopted) as "worse, or a subgroup", which
+does not cover hybrid: better than dense, and not adopted because it was
+not separable from BM25. Figure 4 said 256 and 512 were not separable "in
+either view", but only the budget view was tested; the switching rule
+never tests fixed k where chunk size varies. Both now say what was
+tested. A README draft listed scripts 13 and 14 among those re-run to
+identical tables; they print and write no table, and the list was
+corrected before commit.
+
+**Not done here.** The build plan's Phase 8 definition is not in this
+repository, so this phase was scoped from CLAUDE.md §2 and §9. The owner
+reviews the README before Phase 8 closes.
+
+### Standing lesson — Phase 8
+
+**A caption is a claim.** It is easy to audit a table and wave through the
+sentence under a figure. Both overclaims here were in the prose around
+correct numbers, and both widened a tested statement into an untested one
+("in either view"; one reason standing in for two).
 
 ---
 
