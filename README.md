@@ -173,12 +173,27 @@ These bound every claim above.
   caught and fixed before closure after validating cleanly while not
   supporting their answers ("valid but wrong" evidence). Mechanical
   validation cannot catch this class.
-- **Dense numbers in the committed tables vary by process.** Chroma's
-  HNSW search is approximate and its deep ranking differs between
-  processes. Span-recall columns were identical in every re-run, but dense
-  deep ranks, MRR and first-hit rank are not reproducible exactly. The
-  search depth is now a declared setting (ef_search 500), which makes
-  dense search exact and repeatable. BM25 tables reproduce exactly.
+- **Reproducibility, measured rather than assumed.** Retrieval results
+  reproduce exactly from the frozen extraction. On 31 October 2026 a fresh
+  clone with its own environment re-downloaded all 130 papers at their
+  recorded arXiv versions and extracted them twice. The two runs were
+  byte-identical to each other, and both were byte-identical to the frozen
+  extraction for **130 of 130** papers, the PDFs included. All 101 gold
+  spans selected the same text, and the rebuilt index reproduced 11
+  retrieval tables cell for cell: nine BM25 tables and two dense tables at
+  ef_search 500. The extracted text is not redistributed, for licensing
+  reasons (arXiv's default licence does not permit third parties to
+  redistribute papers). So a clone regenerates it and checks it against
+  committed SHA256 hashes (`data/eval/interim_sha256.csv`). This holds
+  while arXiv keeps serving those exact versions and PyMuPDF stays at
+  1.28.2.
+- **Some committed dense numbers vary by process.** Older dense tables
+  were searched at Chroma's default HNSW depth (ef_search 100). That
+  search is approximate, and its deep ranking differs between processes.
+  Span-recall columns were identical in every re-run, but deep ranks, MRR
+  and first-hit rank in those tables are not exactly reproducible. Dense
+  search now runs at a declared ef_search of 500, which is exact and
+  repeatable.
 - **The embedding model sees only part of each chunk.** all-MiniLM-L6-v2
   reads 256 word pieces, so about 53% of chunk text never reaches it. This
   caps the dense ceiling. Most dense misses had their evidence fully
@@ -193,8 +208,7 @@ These bound every claim above.
 
 ## Reproducing
 
-**Status:** the fresh-clone check (Phase 9) has not been run yet. What
-follows is what has been verified so far, and nothing more.
+Every step below was run from a fresh clone on 31 October 2026 (Phase 9).
 
 ```powershell
 git clone <repo> C:\rag-lab        # a short path: deep paths exceed Windows' 260-character limit
@@ -203,11 +217,25 @@ python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.lock.txt
 python -m pytest -q
+
+# corpus and extraction (about 10 minutes, mostly polite pauses between downloads)
+python scripts\01_fetch_corpus.py --from-manifest
+python scripts\02_extract_text.py --compare 0
+python scripts\30_extraction_hashes.py --check data\interim --raw data\raw
+python scripts\08_validate_gold.py
+
+# index, then any retrieval table
+python scripts\03_build_index.py --config baseline.yaml
+python scripts\10_eval_retrieval.py --config sweep_bm25.yaml --tag bm25 --k-max 50
 ```
 
 The lockfile installs torch 2.11.0 with CUDA 12.8 (needed for the RTX
-50-series). A fresh install from it was verified on 31 October 2026: same
-package set, all tests passing. See `docs/dependencies.md`.
+50-series). `--from-manifest` downloads the recorded paper versions; it
+never searches arXiv, because a search today returns a different corpus.
+Use the virtual environment created inside the clone. The package
+resolves its data directories from where it is installed, so another
+checkout's environment would write into that checkout. The command each
+table was written with is in `results/tables/provenance.csv`.
 
 **From the committed tables, with no corpus, index or API key:** every
 statistic and figure. Half-split stability, paired tests and the
@@ -216,11 +244,10 @@ read only `results/tables/`, and each was re-run and reproduced its
 committed tables exactly. `13` and `14` print comparisons from the same
 tables, and `29_figures.py` draws the figures from them.
 
-**Retrieval runs** need the corpus, the frozen text extraction and a
-Chroma index (`scripts/01`–`03`, then `10_eval_retrieval.py`). Gold
-evidence is anchored to exact character offsets in the extraction.
-Whether a fresh download and extraction reproduce it byte for byte is
-what Phase 9 checks.
+**Retrieval runs** need the corpus, the extraction and a Chroma index
+(the commands above). Gold evidence is anchored to exact character
+offsets in the extraction. `30_extraction_hashes.py --check` confirms a
+regenerated extraction matches the frozen one before anything is scored.
 
 **Generation** (`26_generate.py`) needs an OpenAI key; model versions are
 pinned to dated snapshots.
