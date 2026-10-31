@@ -2728,7 +2728,8 @@ index (`scripts/diagnose_hnsw.py`, which never writes to the real one),
 `ef_search = 500` made every one of three processes identical to exact
 search for all 58 questions at every depth to 50. Applying it to the real
 collection changes the index configuration, so it waits for the owner
-(CLAUDE.md §14). It would not alter any committed table.
+(CLAUDE.md §14). It would not alter any committed table. *(Approved and
+applied the same day; see "ef_search declared, set to 500" below.)*
 
 **Deferred, with a trigger.** Regenerating the dense tables under exact
 search is deferred until a claim depends on a dense number in the
@@ -2751,6 +2752,116 @@ process. Verification runs are repeated, in separate processes, before
 they are believed. The same holds for any check whose outcome could
 depend on state outside the code: a process, a device, a thread count, a
 cache.
+
+### ef_search declared, set to 500, paraphrase test re-run (31 October 2026)
+
+Approved by the owner in four steps, in this order.
+
+**1. Declared before it was changed.** `ef_search` was never a choice.
+Every collection was created through `get_or_create_collection` with only
+`hnsw:space` set, so it persisted Chroma 1.5.9's default of 100. That is a
+library default, and a version bump could have changed it silently,
+changing every dense number with no line of this project's code moving.
+Chroma 1.5.9 was installed on 25 August, before any collection existed, and
+no collection had been modified (the diagnostics ran on copies), so 100
+holds for every dense table committed to date.
+
+It is now a declared config value, `index.ef_search`, under the rule
+written after the 2,000-character context cap: *any constant that changes
+what a model sees is a declared config value that reports when it fires,
+never a default argument.*
+
+- `ChromaStore` takes `ef_search`, sets it when it creates a collection,
+  and refuses an existing collection that persists a different value.
+  Querying anyway would be a search at a depth nobody declared.
+  `set_ef_search()` is the one way to change it.
+- `03_build_index.py` refuses a config without it. `10_eval_retrieval.py`
+  refuses a dense or hybrid run without it and prints it in the run header.
+  `12_oracle_query.py` does the same. Scripts 04, 05 and 26 check it when
+  declared.
+- The provenance ledger gained an `ef_search` column: the depth of every
+  dense query the run made, `n/a` when it made none. A table derived from
+  other tables (paired tests, stability, results) made no query and reads
+  `n/a`; its inputs' rows carry the value. `record()` now refuses to append
+  to a ledger whose header differs, rather than shifting every field. That
+  guard fired once on its first day, on a stale scratch ledger with an
+  older column set.
+
+**2. Every existing dense table annotated.** All rows of the 24 tables
+produced by a dense HNSW query now read `ef_search = 100`:
+`retrieval_{baseline, chunk256, chunk256_rerun1-3, chunk1024, hybrid,
+hybrid_interleave, hybrid_interleave_rerun1-3, hybrid_rrf1, hybrid_rrf10,
+para_dense}`, `cache_probe_{cached, cpu, cuda, para_cuda}` and
+`oracle_{baseline, chunk256, chunk1024}_k{10,50}`. `hnsw_check.csv` reads
+`100;500` (it searched copies at both). The other 99 rows read `n/a`.
+Commit `68c7b17`, with the configs declaring 100 to match the live index at
+that commit.
+
+**3. The live collection set to 500.** With the Chroma directory backed up
+first: `ChromaStore(CHROMA_DIR, "baseline_fixed512_minilm",
+ef_search=100).set_ef_search(500)`. A new client reads back 500; vectors,
+graph and count (2,938) are untouched. `baseline.yaml`, `dense_phase5.yaml`
+and `sweep_hybrid.yaml`, which read that collection, declare 500. The
+chunk256 and chunk1024 collections were not touched and stay declared at
+100. Commit `67abcf0`. On the live index, the top 50 under HNSW at 500 is
+identical to exact cosine search for **58 of 58** questions.
+
+**4. The paraphrase test, both dense arms at 500.** A paired test whose
+arms differ in search depth is not a paired test, so the original questions
+were re-run at 500 under a new tag rather than pairing the rewrites against
+`retrieval_baseline.csv` at 100. That table is untouched and remains the
+record of Phase 5.
+
+```
+python scripts\10_eval_retrieval.py --config dense_phase5.yaml --tag dense_ef500 --k-max 50
+python scripts\10_eval_retrieval.py --config dense_phase5.yaml --gold data/eval/gold_paraphrased.jsonl --tag para_dense_ef500 --k-max 50
+python scripts\19_paraphrase_result.py --orig-dense dense_ef500 --para-dense para_dense_ef500 --out results/tables/paraphrase_result_ef500.csv
+```
+
+Each dense arm was run a second time in a separate process; every column of
+both tables was identical. Against the committed tables at 100:
+
+| | span-recall columns | columns that moved |
+|---|---|---|
+| `dense_ef500` vs `baseline` | identical | first-hit rank / MRR: a002 (46 → beyond 50), c002 (48 → 49), f017 (19 → 20), m008 (37 → 38); nDCG@20 f017; chunks at 40k f013 (20 → 19) |
+| `para_dense_ef500` vs `para_dense` | identical | first-hit rank / MRR: c002 (48 → 49), f017 (19 → 20), m002 (47 → 49); nDCG@20 a006, f017; chunks at 40k f013 (20 → 19) |
+
+Mean MRR: 0.3507 → 0.3503 on the originals, 0.2975 unchanged on the
+rewrites. a002 is the instructive one: at 100 the approximate search
+skipped chunks that exact search ranks above a002's hit, which pushed the
+hit up into the top 50.
+
+**`paraphrase_result_ef500.csv` and its `_questions` table are identical
+to the committed `paraphrase_result.csv` and `_questions`, cell for cell.**
+Manipulation check 0.440; effect +0.275 [+0.081, +0.462] at the 20k budget
+and +0.250 [+0.095, +0.415] at k = 20; delta on the rewrites −0.075 at both;
+the dense guard −0.100 and −0.150, not triggered, the latter still at its
+boundary. Confound explanation supported at both metrics. Nothing in §6 or
+the README draft changes.
+
+**What this changes going forward.** Dense runs of the fixed_512 collection
+are now exact and repeatable. The Phase 9 wording for criterion 2 stands
+for the committed dense tables, which were searched at 100. A fresh clone
+rebuilds the collection through `03_build_index.py`, which now creates it
+at the declared 500.
+
+**Testing on copies first was the discipline missing in Phase 3.** The
+2,000-character cap went in as a default argument and sat in the code
+from Phase 3 until 30 October, cutting 62.8% of chunks, before anyone
+measured it. Here the change was
+measured on throwaway copies of the index (`diagnose_hnsw.py`) and proposed
+with its effect already known. Only then did it touch the live collection,
+behind a declaration that refuses a mismatch. Tests: 365 passing (store
+behaviour on a throwaway Chroma directory; the ledger column and its
+header guard).
+
+### Standing lesson — ef_search
+
+**A library default is a decision someone else made, and can remake.**
+Every parameter that shapes a result is declared in config, checked
+against the artifact it governs, and written into the provenance of
+every table it produced, including the ones written before anyone knew
+it mattered.
 
 ---
 
