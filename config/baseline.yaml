@@ -19,6 +19,9 @@
 # spans found at k=10 and k=20 on all 58 questions. 04_search.py is still
 # a dense-only ad-hoc tool.
 #
+# index.ef_search: 500 since 31 Oct 2026 (was Chroma's default 100, never
+# chosen). Unused by BM25; it governs any dense search of this collection.
+#
 # retrieval.k is for generation only; the harness scores every k up to
 # --k-max. Set to 20 by sweep 4 (docs/k-sweep-protocol.md): every step on
 # the ladder 1->3->5->10->20 added evidence detectably under BM25, the last
@@ -35,7 +38,7 @@ embedding:
 
 index:
   collection: baseline_fixed512_minilm
-  ef_search: 100           # HNSW search depth, persisted in the collection; declared, never a library default
+  ef_search: 500           # HNSW search depth, persisted in the collection; declared, never a library default
 
 retrieval:
   mode: bm25              # dense | bm25 | hybrid  (was dense until sweep 2)
