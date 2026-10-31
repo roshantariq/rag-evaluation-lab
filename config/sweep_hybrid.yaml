@@ -1,3 +1,5 @@
+# index.ef_search: 500 since 31 Oct 2026 (was Chroma's default 100). The
+# committed hybrid tables were searched at 100; a re-run is at 500.
 # Sweep 2, arm 3: reciprocal rank fusion of dense and BM25.
 #
 # Same collection as baseline.yaml, deliberately. Both retrievers read the
@@ -17,7 +19,7 @@ embedding:
 
 index:
   collection: baseline_fixed512_minilm
-  ef_search: 100           # HNSW search depth, persisted in the collection; declared, never a library default
+  ef_search: 500           # HNSW search depth, persisted in the collection; declared, never a library default
 
 retrieval:
   mode: hybrid

@@ -2,7 +2,12 @@
 # sweep 2 redefined the baseline as BM25. Kept so the dense arm stays
 # re-runnable by name.
 #
-# results/tables/retrieval_baseline.csv holds THIS run (dense, Phase 5).
+# results/tables/retrieval_baseline.csv holds THIS run (dense, Phase 5),
+# searched at ef_search 100, Chroma's default and never a choice. On
+# 31 Oct 2026 the collection was set to 500, which on copies made HNSW
+# identical to exact search and repeatable across processes for all 58
+# questions at every depth to 50 (hnsw_check.csv). A run of this config
+# now searches at 500; retrieval_baseline.csv stays as the record at 100.
 # The `baseline` tag must never be overwritten: every Phase 5-6 comparison,
 # the oracle ceiling and the truncation diagnostic read that file.
 #
@@ -19,7 +24,7 @@ embedding:
 
 index:
   collection: baseline_fixed512_minilm
-  ef_search: 100           # HNSW search depth, persisted in the collection; declared, never a library default
+  ef_search: 500           # HNSW search depth, persisted in the collection; declared, never a library default
 
 retrieval:
   mode: dense             # dense | bm25 | hybrid
