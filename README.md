@@ -3,8 +3,11 @@
 Measured findings about which design decisions in a retrieval-augmented
 generation (RAG) system change retrieval quality and answer faithfulness.
 The deliverable is the findings, not the system: the pipeline is the
-apparatus that produced them. Every decision rule was written down and
-committed before the run it governed, every result table is in
+apparatus that produced them. From the paraphrase test onward, each
+decision rule was committed as its own protocol before the run it
+governed (seven in `docs/`). Earlier ones were not: the switching rule was
+first written down alongside sweep 1's result and applied from sweep 2,
+and the fusion runs were exploratory. Every result table is in
 `results/tables/`, and every table carries a provenance row (the command,
 git commit and gold-set hash that wrote it).
 
@@ -51,7 +54,7 @@ model, one corpus, and three of the 48 labels were disputed.
 
 ## Retrieval: what moved, and what didn't
 
-![Every pre-registered comparison at a 20,000-character budget](results/figures/fig2_effects.png)
+![Every planned comparison at a 20,000-character budget](results/figures/fig2_effects.png)
 
 Span recall is the share of gold evidence spans that appear in the
 retrieved text. The primary metric fixes the **amount of text** retrieved
@@ -187,13 +190,19 @@ These bound every claim above.
   committed SHA256 hashes (`data/eval/interim_sha256.csv`). This holds
   while arXiv keeps serving those exact versions and PyMuPDF stays at
   1.28.2.
-- **Some committed dense numbers vary by process.** Older dense tables
-  were searched at Chroma's default HNSW depth (ef_search 100). That
-  search is approximate, and its deep ranking differs between processes.
-  Span-recall columns were identical in every re-run, but deep ranks, MRR
-  and first-hit rank in those tables are not exactly reproducible. Dense
-  search now runs at a declared ef_search of 500, which is exact and
-  repeatable.
+- **Dense tables written before 31 October vary below the top of the
+  ranking; the current configuration does not.** Those tables were
+  searched at Chroma's default HNSW depth (ef_search 100), which is
+  approximate and varies between processes. Across three processes the top
+  10 matched for all 58 questions, except one batch that swapped ranks 9
+  and 10 for one question. Deeper down, the order diverged more: the top 50
+  matched for only 40–43 questions. Gold spans found never changed at
+  k ≤ 30, and every span-recall column was identical in every re-run, but
+  first-hit rank, MRR and deep ranks in those tables are not exactly
+  reproducible. At the declared ef_search of 500, search is exact. Phase 9
+  rebuilt the index in a fresh clone, embedded everything from scratch on
+  the GPU, and reproduced both current dense tables with **0 differing
+  cells**.
 - **The embedding model sees only part of each chunk.** all-MiniLM-L6-v2
   reads 256 word pieces, so about 53% of chunk text never reaches it. This
   caps the dense ceiling. Most dense misses had their evidence fully
