@@ -1,4 +1,12 @@
-"""Fetch the arXiv corpus. Run with --dry-run first to inspect what you'd get."""
+"""Fetch the arXiv corpus. Run with --dry-run first to inspect what you'd get.
+
+--from-manifest downloads exactly the papers and versions recorded in the
+committed data/eval/corpus_manifest.jsonl, without searching arXiv and
+without rewriting the manifest. A search today would return a different
+corpus. This is how a clone recovers the PDFs behind the frozen extraction.
+Never run either mode in the working tree that holds the frozen data/
+(CLAUDE.md §14).
+"""
 
 from __future__ import annotations
 
@@ -11,6 +19,7 @@ from rageval.config import CONFIG_DIR, CORPUS_MANIFEST, RAW_DIR, ensure_dirs
 from rageval.ingest.arxiv_fetch import (
     download_pdfs,
     load_corpus_config,
+    read_manifest,
     search_corpus,
     write_manifest,
 )
@@ -22,12 +31,27 @@ def main() -> int:
                         help="Search and report only. Downloads nothing.")
     parser.add_argument("--limit", type=int, default=None,
                         help="Override target corpus size, for quick tests.")
+    parser.add_argument("--from-manifest", action="store_true",
+                        help="Download the committed manifest's papers at their recorded "
+                             "versions. No search; the manifest is not rewritten.")
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(message)s", stream=sys.stdout)
     logging.getLogger("arxiv").setLevel(logging.WARNING)
 
     ensure_dirs()
+    if args.from_manifest:
+        records = read_manifest(CORPUS_MANIFEST)
+        for r in records:
+            r.download_ok, r.download_error = False, None
+        print(f"Downloading {len(records)} PDFs from {CORPUS_MANIFEST.name} to {RAW_DIR} ...\n")
+        records = download_pdfs(records, RAW_DIR)
+        failed = [r for r in records if not r.download_ok]
+        print(f"\nDownloaded {len(records) - len(failed)}/{len(records)}.")
+        for r in failed:
+            print(f"  FAILED {r.arxiv_id}: {r.download_error}")
+        return 0 if not failed else 1
+
     config = load_corpus_config(CONFIG_DIR / "corpus.yaml")
     if args.limit:
         config["target_size"] = args.limit

@@ -2920,6 +2920,60 @@ correct numbers, and both widened a tested statement into an untested one
 
 ---
 
+## Phase 9 — Reproducibility from a fresh clone
+
+### Before the clone: rule scoped, extractor identified, hashes committed (31 October 2026)
+
+**The hard stop is scoped, not absolute** (owner, 31 October). The rule
+now reads: never run `01_fetch_corpus.py` or `02_extract_text.py` against
+this working tree, because they regenerate `data/interim/` and the 101
+gold spans are anchored to its byte offsets. Running them in a separate
+throwaway clone with its own `data/` is permitted, and is how this phase
+verifies extraction.
+
+**Which PyMuPDF produced the frozen text: 1.28.2, the pinned version.**
+Established before fetching anything, so a library upgrade could not be
+misread as an extraction-determinism finding.
+
+| evidence | time (26 August unless stated, +0300) |
+|---|---|
+| `pymupdf-1.28.2.dist-info` installed, never modified since | 25 August 15:12 |
+| PDFs written to `data/raw/` | 14:58 to 15:12 |
+| lockfile committed pinning `pymupdf==1.28.2` (`4d7dbca`) | 15:15 |
+| all 130 `data/interim/` files written | 18:23:13 to 18:23:28 |
+| extraction frozen (`2d3f8d6`) | 18:26 |
+
+The interim files record no extractor version themselves, so this rests
+on the install record and the lockfile, not on a stamp in the output.
+The extraction code is also unchanged: `extract.py`, `arxiv_fetch.py` and
+`02_extract_text.py` have no commits after `2d3f8d6`. Code, library and
+recorded paper versions are all held constant, so the clone varies only
+in what arXiv serves and in the extraction run itself.
+
+**Decision: `data/interim/` is not committed; its SHA256 hashes are.**
+arXiv's default licence grants arXiv a non-exclusive licence to
+distribute a paper. It gives third parties no right to redistribute it,
+and the extracted text is a derivative of the paper. So neither the PDFs
+nor the text ship with this repository. A clone must therefore regenerate
+the extraction, and needs a reference to check it against.
+`data/eval/interim_sha256.csv` (130 rows, written once by
+`scripts/30_extraction_hashes.py --write`, which refuses to overwrite)
+holds per document the hash of the JSON file, of its `text` field alone
+(what the gold spans anchor to) and of the source PDF. The three hashes
+separate three causes of a mismatch: different bytes from arXiv, an
+extraction difference in the text, or a difference only in the file's
+other fields. The manifest ships in `data/eval/` with the gold set, and
+it stands in for the text a clone cannot be given.
+
+**`01_fetch_corpus.py --from-manifest`.** The fetch script could only
+search arXiv and then rewrite the manifest, and a search today returns a
+different corpus. The new mode downloads exactly the 130 recorded papers
+at their recorded versions (every manifest URL is versioned, e.g.
+`.../pdf/1506.04214v2`), never writes the manifest, and fails unless all
+130 arrive.
+
+---
+
 ## Plan amendments
 
 **Gold-set evidence anchors to character spans, not chunk IDs.** Recorded
