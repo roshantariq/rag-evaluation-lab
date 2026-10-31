@@ -37,16 +37,48 @@ class Retrieved:
 
 
 class ChromaStore:
-    def __init__(self, path: Path, collection: str):
+    def __init__(self, path: Path, collection: str, ef_search: int | None = None):
+        """Open `collection`, creating it with `ef_search` if it is absent.
+
+        With `ef_search` given, an existing collection must already persist
+        that value: ValueError otherwise. None skips the check (BM25 and
+        record-reading callers never run an HNSW search).
+        """
         self.path = path
         self.name = collection
+        self.declared_ef_search = ef_search
         path.mkdir(parents=True, exist_ok=True)
         self.client = chromadb.PersistentClient(
             path=str(path), settings=Settings(anonymized_telemetry=False)
         )
-        self.collection = self.client.get_or_create_collection(
-            name=collection, metadata={"hnsw:space": "cosine"}
-        )
+        if collection in {c.name for c in self.client.list_collections()}:
+            self.collection = self.client.get_collection(collection)
+        else:
+            self.collection = self._create()
+        if ef_search is not None and self.ef_search != ef_search:
+            raise ValueError(
+                f"collection {collection!r} persists ef_search={self.ef_search}, "
+                f"but the config declares {ef_search}. Change one deliberately; "
+                f"a search at a depth nobody declared is not run.")
+
+    def _create(self):
+        hnsw = {"space": "cosine"}
+        if self.declared_ef_search is not None:
+            hnsw["ef_search"] = self.declared_ef_search
+        return self.client.create_collection(name=self.name, configuration={"hnsw": hnsw})
+
+    @property
+    def ef_search(self) -> int:
+        """The HNSW search depth the collection persists: what queries use."""
+        return int(self.collection.configuration["hnsw"]["ef_search"])
+
+    def set_ef_search(self, ef_search: int) -> None:
+        """Persist a new search depth. Vectors and graph are untouched."""
+        self.collection.modify(configuration={"hnsw": {"ef_search": int(ef_search)}})
+        self.collection = self.client.get_collection(self.name)
+        self.declared_ef_search = ef_search
+        if self.ef_search != ef_search:
+            raise RuntimeError(f"ef_search reads {self.ef_search} after setting {ef_search}")
 
     def reset(self) -> None:
         """Drop and recreate. Indexes are derived data; never patch in place."""
@@ -54,9 +86,7 @@ class ChromaStore:
             self.client.delete_collection(self.name)
         except Exception:  # noqa: BLE001 - absent collection is fine
             pass
-        self.collection = self.client.get_or_create_collection(
-            name=self.name, metadata={"hnsw:space": "cosine"}
-        )
+        self.collection = self._create()
 
     def add_chunks(self, chunks: list, embeddings: np.ndarray) -> None:
         for i in range(0, len(chunks), _MAX_BATCH):

@@ -129,7 +129,8 @@ def main() -> int:
     out = TABLES_DIR / "hnsw_check.csv"
     out.unlink(missing_ok=True)
     df.to_csv(out, index=False)
-    record([out], gold=[EVAL_DIR / "gold_questions.jsonl"])
+    record([out], gold=[EVAL_DIR / "gold_questions.jsonl"],
+           ef_search=";".join(str(ef) for ef in args.ef))
     print(df.to_string(index=False))
     print(f"\n  -> {out}")
     return 0

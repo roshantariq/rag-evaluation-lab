@@ -139,7 +139,8 @@ def main() -> int:
     for p in (answers_path, faith_path) if args.judge else (answers_path,):
         p.unlink(missing_ok=True)
 
-    store = ChromaStore(CHROMA_DIR, cfg["index"]["collection"])
+    store = ChromaStore(CHROMA_DIR, cfg["index"]["collection"],
+                        ef_search=cfg["index"].get("ef_search"))
     retriever = build_retriever(cfg, store)
     llm = LLMClient(provider=gen.get("provider", "openai"), model=gen["model"],
                     temperature=gen["temperature"], max_tokens=gen["max_tokens"],

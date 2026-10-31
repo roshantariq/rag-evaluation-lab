@@ -304,7 +304,19 @@ def main() -> int:
         print(f"  --limit {args.limit}: SMOKE RUN on {len(scorable)} question(s). "
               f"Not a result; written to smoke_{args.tag}.csv\n")
 
-    store = ChromaStore(CHROMA_DIR, cfg["index"]["collection"])
+    # A dense search's depth is a declared config value; the store refuses a
+    # collection persisting another one (rageval/store/chroma_store.py).
+    ef_search = cfg["index"].get("ef_search")
+    hnsw = mode in ("dense", "hybrid")
+    if hnsw and ef_search is None:
+        print(f"{args.config} declares no index.ef_search; a {mode} run searches HNSW "
+              "at that depth, so it must be declared.")
+        return 1
+    try:
+        store = ChromaStore(CHROMA_DIR, cfg["index"]["collection"], ef_search=ef_search)
+    except ValueError as e:
+        print(f"  {e}")
+        return 1
     if store.count() == 0:
         print("Index is empty. Run scripts/03_build_index.py first.")
         return 1
@@ -317,7 +329,8 @@ def main() -> int:
               f"{len(chunk_set)} papers); the collection is not used")
     else:
         print(f"  collection   : {cfg['index']['collection']}  ({store.count()} chunks)")
-    if mode in ("dense", "hybrid"):
+    if hnsw:
+        print(f"  ef_search    : {store.ef_search}  (declared; the collection agrees)")
         print(f"  embedding    : {cfg['embedding']['model']}"
               f"{'  (cache OFF: queries embedded fresh)' if args.no_embed_cache else ''}"
               f"{f'  device {args.embed_device}' if args.embed_device else ''}")
@@ -462,7 +475,7 @@ def main() -> int:
     else:
         out_path = args.out or (TABLES_DIR / f"retrieval_{args.tag}.csv")
     df.to_csv(out_path, index=False)
-    record([out_path], gold=[gold_path])
+    record([out_path], gold=[gold_path], ef_search=store.ef_search if hnsw else None)
 
     # --- report ------------------------------------------------------------
     ks = DEFAULT_KS
