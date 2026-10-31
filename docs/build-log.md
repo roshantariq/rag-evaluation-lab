@@ -2635,6 +2635,123 @@ insufficient (c006) and a reference answer that uses one phrase in two
 senses (c008). Mechanical validation checks that a quote is where it says
 it is; it cannot check that the spans carry the whole answer.
 
+### Dense retrieval: process-to-process variation and approximate search (31 October 2026)
+
+**Question.** The embedding cache records no device per vector, and the
+Phase 5 dense baseline was committed 31 minutes before the CUDA wheel was
+installed, so dense arms might mix CPU and GPU query vectors. The probe
+(suggested by external review): embed the 58 scorable questions fresh,
+bypassing the cache, query the same collection, and compare against the
+committed table. The harness gained `--no-embed-cache` and
+`--embed-device` for it (`2d9a2c6`).
+
+**Device effect, measured.** Cached, fresh-CPU and fresh-CUDA query
+vectors differ by at most 1.9e-7 (`cache_probe_*.csv`).
+
+**What the probe actually found: the index is not repeatable across
+processes.** The first fresh-CUDA run matched `retrieval_baseline.csv`
+in every cell and read as a clean reproduction. Re-running the same arms
+through the committed harness options gave different deep ranks, including
+the *cached* arm, whose query vectors are fixed. Querying the collection
+directly with one fixed vector returned the same top 50 on every call
+within a process and a different top 50 in each of four new processes.
+Chroma answers with an approximate HNSW search, and its result depends on
+the process. The cause is the search, not the harness or the vectors.
+
+**Magnitude.** Three processes, the 58 scorable questions, cached
+vectors, fixed_512 collection, k = top-k chunk order:
+
+| | top 10 | top 13 | top 20 | top 30 | top 50 |
+|---|---|---|---|---|---|
+| identical across processes (harness dumps) | 58 | — | 55 | 52 | 43 |
+| identical across processes (`hnsw_check.csv`) | 58 | 57 | 53 | 52 | 40 |
+| identical to exact search in every process | 57 | 55 | 48 | 44 | 31 |
+| **gold spans found identical to exact search** | **58** | **58** | **58** | **58** | 57 |
+
+The shallowest cross-process difference in the harness dumps was rank 14.
+In one further three-process batch on a copy of the index, one question
+(f012) differed at ranks 9-10, so "stable above rank 13" is a tendency,
+not a bound. Approximation, separately from variation, reaches the top
+10: for f013, exact search ranks a chunk 9th (similarity 0.445) that HNSW
+omitted in all three processes in favour of a 0.431 chunk. In no run did
+either effect change which gold spans were found at k <= 30, and exact
+search reproduces the committed dense recall (0.436 at k = 10).
+
+**Which reported numbers sit in the variable zone.** By the *maximum*
+chunks any question consumes, not the mean:
+
+| arm | budget 20k reaches | exposed? |
+|---|---|---|
+| dense fixed_512 (baseline, `para_dense`) | 12 chunks | stable region |
+| dense chunk256 (sweep 1) | 27 chunks | **exposed** |
+| dense chunk1024 (sweep 1) | 7 chunks | stable region |
+| dense at k = 20 (sweep 4 context, paraphrase test's second metric) | 20 | **exposed** |
+
+**Narrowed re-runs** (external review's option 2). The two places a
+quoted number sits in the variable zone, each re-run three times in
+separate processes (`retrieval_chunk256_rerun{1,2,3}`,
+`retrieval_hybrid_interleave_rerun{1,2,3}`):
+
+| arm | span recall columns (k = 1-20, budgets 5k-40k) | other columns that moved |
+|---|---|---|
+| chunk256 | identical to committed in 3/3 | mrr, first_hit_rank, k@B20000/B40000 for 2-5 questions |
+| hybrid_interleave | identical to committed in 3/3 | none: every cell identical |
+
+Spread in every span-recall column: **zero**. The paired test and the
+half-split stability analysis read only those columns, so neither can
+change; re-running sweep 1's paired test on `chunk256_rerun2` returned
+identical numbers (512 vs 256 Holm p 0.5034; 1024 Holm p 0.0089).
+
+**Would any decision have moved? No.** Sweep 1's null (p = 0.5034) and its
+1024 result (p = 0.0089), sweep 2b's family of Holm p = 1.0000, and every
+BM25 decision since sweep 2 rest on span-recall columns that were
+identical in every re-run. Sweeps 3 and 4 and Phase 7 run on BM25, which
+reads no embeddings and no HNSW index. The paraphrase test's dense arm is
+stable at the 20k budget and exposed at k = 20; its fresh-CUDA re-run
+(`cache_probe_para_cuda`) moved one question (m002) at rank 47-48 only,
+with every span column identical.
+
+**The device question is closed by subsumption.** The CPU/GPU effect
+(≤ 1.9e-7 in the query vectors) is smaller than the index's own
+process-to-process variation, so this probe cannot isolate it, and no
+probe through the same index could. It is not left open: whatever the
+device did, it is bounded by a variation that changed no span-recall
+column in any run. The same holds for the document side: the fixed_512
+collection predates the CUDA install, and when chunk256 and chunk1024 were
+built is not recorded. That is a known, bounded asymmetry between sweep
+1's arms, documented rather than fixed.
+
+**Making dense search exact.** `ef_search` cannot be passed to a query in
+Chroma 1.5.9; it is a persisted collection setting, changed with
+`collection.modify()`. The collection's setting is 100. On copies of the
+index (`scripts/diagnose_hnsw.py`, which never writes to the real one),
+`ef_search = 500` made every one of three processes identical to exact
+search for all 58 questions at every depth to 50. Applying it to the real
+collection changes the index configuration, so it waits for the owner
+(CLAUDE.md §14). It would not alter any committed table.
+
+**Deferred, with a trigger.** Regenerating the dense tables under exact
+search is deferred until a claim depends on a dense number in the
+variable zone that is not span recall. No remaining claim does.
+
+**Phase 9 wording for completion criterion 2** ("every number is
+reproducible from a fresh clone"), corrected from the review's draft
+("exact at k <= 13"), which the f012 batch contradicts: *BM25 tables
+reproduce exactly. Dense tables' span-recall columns reproduced in every
+re-run; their deep ranks, MRR and first-hit rank vary between processes,
+because Chroma's HNSW search is approximate and process-dependent.* This
+qualifies a stated completion criterion and belongs in the README's
+limitations, not only here.
+
+### Standing lesson — dense reproducibility
+
+**A single run that confirms is not a confirmation.** The first device
+probe reported a clean, cell-for-cell reproduction, and it was one lucky
+process. Verification runs are repeated, in separate processes, before
+they are believed. The same holds for any check whose outcome could
+depend on state outside the code: a process, a device, a thread count, a
+cache.
+
 ---
 
 ## Plan amendments
