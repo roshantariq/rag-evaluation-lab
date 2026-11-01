@@ -215,6 +215,26 @@ These bound every claim above.
 
 ---
 
+## Future work
+
+- **Does the abstention result transfer? (Project 2, planned.)** A
+  follow-up study will test the headline in text-to-SQL, where the
+  failure found here, answering the neighbouring question, is easier
+  still: a query on a look-alike column runs and returns plausible rows.
+  It is planned on TrustSQL's unanswerable questions, across several
+  models and prompt strengths, with its protocol committed before any
+  run, as here. It will be a separate repository.
+- **The same test on other papers.** Project 2 changes the setting, so
+  it cannot say whether 8/16 → 0/16 holds on a different corpus with
+  this same kind of system. A replication on another field's papers,
+  with more look-alike unanswerable questions and more than one
+  generator, would.
+- **Retrieval with questions written blind to the evidence.** The
+  authoring confound would be tested directly by a gold set whose
+  questions were written without reading the passages that answer them.
+
+---
+
 ## Reproducing
 
 Every step below was run from a fresh clone on 31 October 2026 (Phase 9).
