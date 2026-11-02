@@ -65,7 +65,7 @@ third parties redistribute papers or their derived text. A clone
 regenerates it and checks it against `data/eval/interim_sha256.csv`
 (per document: the JSON file, its `text` field, and the source PDF).
 
-A throwaway clone at `ec3dd94`, with its own venv (PyMuPDF 1.28.2),
+A throwaway clone at `980efeb`, with its own venv (PyMuPDF 1.28.2),
 fetched the 130 papers with `01_fetch_corpus.py --from-manifest` (130/130,
 no failures) and extracted them twice into separate directories:
 

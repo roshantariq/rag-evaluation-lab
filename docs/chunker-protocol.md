@@ -3,7 +3,7 @@
 Written before any chunker run exists. Nothing below is revised after
 seeing a result; if the design proves wrong, the flaw is recorded next to
 the outcome. The literature behind the design is in the build log,
-"Literature check, before the chunker sweep" (`14fd7e3`).
+"Literature check, before the chunker sweep" (`f223ddb`).
 
 ## What it tests
 

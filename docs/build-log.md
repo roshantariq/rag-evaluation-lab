@@ -3,7 +3,7 @@
 Running record of decisions, defects and measured results. Phase numbering
 follows the build plan. Newest phase last.
 
-**Status (31 October 2026):** Phases 0–9 complete; the fresh-clone check reproduced extraction (130/130) and every BM25 table exactly. Merged to `main` and tagged `v1.0` (`6b0766c`), 31 October 2026. Retrieval:
+**Status (31 October 2026):** Phases 0–9 complete; the fresh-clone check reproduced extraction (130/130) and every BM25 table exactly. Merged to `main` and tagged `v1.0` (`ab97e5b`), 31 October 2026. Retrieval:
 BM25 over fixed_512 chunks replaced dense in sweep 2; every later sweep
 (reranking, chunk filter, chunkers, replication) was null, and the k sweep
 set generation to k = 20. BM25's lead is largely an authoring artifact
@@ -28,7 +28,7 @@ No `LICENSE` file and no `.gitattributes` were ever in the repository until
 then. `requirements.lock.txt` itself showed the gap: PowerShell redirection
 had written it as UTF-16 with CRLF line endings, which LF enforcement would
 have caught. Both files were added, and the lockfile transcoded to UTF-8
-with LF, in commit `7a3539a`. The original claim stays above as it was
+with LF, in commit `888856f`. The original claim stays above as it was
 written.
 
 ### Defects found
@@ -1485,7 +1485,7 @@ between groups, resolves it in the direction the tercile split pointed.
 **`--gold` crashed the harness.** `10_eval_retrieval.py` passed the option's
 string straight to `load_gold`, which calls `path.exists()`. The option had
 never been used before the paraphrase runs, so the defect sat in an untested
-path for two sweeps. It failed before scoring anything; fixed in `0f0cb35`
+path for two sweeps. It failed before scoring anything; fixed in `7f2144e`
 and the run repeated. Every CLI option that the protocol depends on should
 be exercised at least once before the run it governs.
 
@@ -1564,7 +1564,7 @@ tests were written before any reranked run existed. One scoring path still
 holds: the rerank arm goes through the same harness and scorer as every
 other arm.
 
-**Run** per `docs/reranking-protocol.md` (committed `c226d68`, before any
+**Run** per `docs/reranking-protocol.md` (committed `be257db`, before any
 run): BM25's top 100 rescored by `BAAI/bge-reranker-v2-m3` at
 `max_length` 1024, scored to `--k-max 50`, on the original and the
 paraphrased gold sets. After the harness change, plain BM25 reproduced the
@@ -1672,7 +1672,7 @@ anything, since the switching rule reads the CI and win rate.
   class again: a value in a CSV that pandas silently reinterprets.
 - `CrossEncoder.max_length` raised a deprecation warning in
   sentence-transformers 6.0.0; the read-back uses `max_seq_length`
-  (`4a7b505`). No number was affected.
+  (`36154c3`). No number was affected.
 
 **Tables:** `retrieval_rerank.csv`, `retrieval_para_rerank.csv`,
 `paired_baseline_bm25_rerank_{B20000,k10,k20}.csv`,
@@ -1693,7 +1693,7 @@ question called "unreachable".
 
 **What it decides.** How many chunks Phase 7 feeds the generator.
 Protocol: `docs/k-sweep-protocol.md`, committed with `21_k_sweep.py` and
-its tests in `71684d0`, before the script was run on the real tables.
+its tests in `c12f02f`, before the script was run on the real tables.
 
 **No new run.** The harness already scores every arm at k = 1, 3, 5, 10, 20
 from one ranked list, so this sweep reads `retrieval_bm25.csv`. Recall can
@@ -1790,7 +1790,7 @@ step tests, not a comparison of arms.
 **What it closes.** Phase 2b removed base64 only and deferred filtering
 low-prose chunks to a measured ablation rather than a silent filter. This
 is that ablation. Protocol: `docs/chunk-filter-protocol.md`, committed with
-the code and tests in `6dd14d3`, before any filtered run.
+the code and tests in `4eb0042`, before any filtered run.
 
 **Built.** `prose_ratio` moved unchanged from `diagnose_chunks.py` to
 `rageval.chunking.quality`, with `filter_records`. The harness gained
@@ -2000,7 +2000,7 @@ several on the gold set is the sweep 3 rule.
 **What it closes.** The build plan's chunking axis, which until now was
 covered only by chunk size because one chunker existed. Protocol:
 `docs/chunker-protocol.md`, committed with the chunkers, chunk sets,
-harness option, decision script and tests in `a54297a`, before any
+harness option, decision script and tests in `01df8f6`, before any
 chunker run.
 
 **Built.**
@@ -2141,7 +2141,7 @@ The pipeline then moved to BM25, whose length normalisation behaves
 nothing like an encoder truncating at 256 word pieces, so the null did
 not transfer automatically. This repeats `fixed_256` vs `fixed_512` under
 the pipeline Phase 6 selected. Protocol: `docs/replication-protocol.md`,
-committed with `25_replication_result.py` and its tests in `7efe707`,
+committed with `25_replication_result.py` and its tests in `b7ceef1`,
 before either run.
 
 **Run.** BM25 on the existing `sweep_fixed256_minilm` collection
@@ -2258,7 +2258,7 @@ context Phase 7's generator will see.
 
 ### Protocol, pinning and the dry run (30 October 2026)
 
-**Pre-registered** in `docs/phase7-protocol.md` (`e0162c6`), before any
+**Pre-registered** in `docs/phase7-protocol.md` (`f160f3a`), before any
 answer existed: generator `gpt-4o-mini`, BM25 k = 20, three strategies ×
 74 questions, a two-label rubric for the 48 unanswerable answers labelled
 blind by Claude and reviewed in full by the owner, a Floor outcome
@@ -2317,7 +2317,7 @@ faithfulness score carries visible judge variance. It is a secondary
 measure and the paired design shares that noise across strategies, but a
 small faithfulness difference should not be read as a strategy effect.
 
-**Judge test-retest, measured** (owner-approved amendment `7bc6b31`,
+**Judge test-retest, measured** (owner-approved amendment `5e602d2`,
 committed before it ran; `judge_retest_dryrun.csv`). Each of the 12
 judged dry-run answers judged once more, same text and contexts:
 
@@ -2348,7 +2348,7 @@ output.
 
 ### Full run, labelling and result: abstention instruction REDUCES hallucination
 
-**Generation** (`2280404`, `generation_answers.csv`): 74 questions × 3
+**Generation** (`774c66c`, `generation_answers.csv`): 74 questions × 3
 strategies = 222 answers, 207 new and 15 from the dry run's cache.
 Integrity: prompt isolation 74/74, retrieval identity 174/174
 scorable rows against `retrieval_bm25.csv` at k = 20, no answer cut off
@@ -2356,7 +2356,7 @@ scorable rows against `retrieval_bm25.csv` at k = 20, no answer cut off
 
 **Retriever: BM25, the Phase 6 selection, not dense.** The pipeline once
 ignored `retrieval.mode` and was dense-only; that was fixed before Phase 7
-(`3827103`, `build_retriever`), `26_generate.py` refuses to run unless
+(`1a11690`, `build_retriever`), `26_generate.py` refuses to run unless
 retrieval is BM25 at k = 20, and check 2 confirms every scorable answer's
 context finds the same gold spans as `retrieval_bm25.csv`. The 33/25
 complete/incomplete split is therefore a property of BM25 at k = 20.
@@ -2364,9 +2364,9 @@ complete/incomplete split is therefore a property of BM25 at k = 20.
 **Labelling** (`27_label_worksheet.py`). The 48 unanswerable answers and 23
 check items (refusal and ambiguity) were shuffled with seed 20260827,
 strategy hidden and the confidence line stripped. Claude labelled both
-sheets first and committed them (`37319f3`) with the keys untracked; the
+sheets first and committed them (`8366471`) with the keys untracked; the
 owner then reviewed every item blind and the keys were committed only
-after both sheets were complete (`23c4b79`). The owner's label is final.
+after both sheets were complete (`bb43f54`). The owner's label is final.
 
 | sheet | agreement | disagreements |
 |---|---|---|
@@ -2563,7 +2563,7 @@ generation log, which pairs question id, strategy and the regex refusal
 flag, and it wrote the questions. Answer style also reveals strategy
 ("INSUFFICIENT CONTEXT" comes almost only from the abstain prompts). An
 unanchored relabel sheet (no Claude labels, new shuffle) was built
-(`9a3330d`) and withdrawn unfilled at the owner's decision; no
+(`49fd7ec`) and withdrawn unfilled at the owner's decision; no
 independent labelling is on record. Faithfulness is one judge with test-retest noise
 0.083.
 
@@ -2639,7 +2639,7 @@ installed, so dense arms might mix CPU and GPU query vectors. The probe
 (suggested by external review): embed the 58 scorable questions fresh,
 bypassing the cache, query the same collection, and compare against the
 committed table. The harness gained `--no-embed-cache` and
-`--embed-device` for it (`2d9a2c6`).
+`--embed-device` for it (`4c60fb1`).
 
 **Device effect, measured.** Cached, fresh-CPU and fresh-CUDA query
 vectors differ by at most 1.9e-7 (`cache_probe_*.csv`).
@@ -2790,7 +2790,7 @@ hybrid_interleave, hybrid_interleave_rerun1-3, hybrid_rrf1, hybrid_rrf10,
 para_dense}`, `cache_probe_{cached, cpu, cuda, para_cuda}` and
 `oracle_{baseline, chunk256, chunk1024}_k{10,50}`. `hnsw_check.csv` reads
 `100;500` (it searched copies at both). The other 99 rows read `n/a`.
-Commit `68c7b17`, with the configs declaring 100 to match the live index at
+Commit `9b97382`, with the configs declaring 100 to match the live index at
 that commit.
 
 **3. The live collection set to 500.** With the Chroma directory backed up
@@ -2799,7 +2799,7 @@ ef_search=100).set_ef_search(500)`. A new client reads back 500; vectors,
 graph and count (2,938) are untouched. `baseline.yaml`, `dense_phase5.yaml`
 and `sweep_hybrid.yaml`, which read that collection, declare 500. The
 chunk256 and chunk1024 collections were not touched and stay declared at
-100. Commit `67abcf0`. On the live index, the top 50 under HNSW at 500 is
+100. Commit `535b218`. On the live index, the top 50 under HNSW at 500 is
 identical to exact cosine search for **58 of 58** questions.
 
 **4. The paraphrase test, both dense arms at 500.** A paired test whose
@@ -2868,7 +2868,7 @@ it mattered.
 **Built.** `scripts/29_figures.py` draws five figures into
 `results/figures/` from committed tables only, and records them in a
 ledger beside them (`results/figures/provenance.csv`, rendered from a
-clean tree at `b0e0ff3`). It computes no statistic. Every interval,
+clean tree at `5845885`). It computes no statistic. Every interval,
 p-value and outcome is read from the table that a pre-registered script
 wrote, and span recall for the chunk-size figure goes through
 `rageval.evaluation.spans`. A figure that recomputed its numbers would be
@@ -2977,7 +2977,7 @@ at their recorded versions (every manifest URL is versioned, e.g.
 Run once, as approved, and recorded here; it is not a check to repeat.
 
 **Clone.** `git clone --branch claude/zealous-cray-42fkop` from GitHub to
-`C:ag-lab` at `ec3dd94`, a new Python 3.11.9 venv, `pip install -r
+`C:ag-lab` at `980efeb`, a new Python 3.11.9 venv, `pip install -r
 requirements.lock.txt`. Before anything ran, `rageval.config` was checked
 in the clone's own interpreter: project root, `data/raw`, `data/interim`,
 `chroma_db`, the embedding cache and `results/tables` all resolved under
@@ -3027,7 +3027,7 @@ the GPU, not BM25 and not exact-by-construction), the dense tables at
 ef_search 100 (approximate, already characterised), and generation (paid
 API; its result scripts reproduce from committed tables).
 
-**Ledger.** The clone's 14 `recorded` rows (commit `ec3dd94`) are appended
+**Ledger.** The clone's 14 `recorded` rows (commit `980efeb`) are appended
 to `results/tables/provenance.csv` with a note naming the clone. Each
 reads `dirty = True`, and the listed paths are the run logs and the two
 extraction directories, untracked in the clone; no code was dirty. A
@@ -3054,6 +3054,29 @@ accident, and the real path to it was not running the wrong script. It
 was running the right script with an interpreter whose editable install
 pointed at the other tree. Paths derived from a package's install
 location follow the interpreter, not the directory you are in.
+
+---
+
+## History rewrite — 2 November 2026
+
+The owner is the sole author of this repository. Commit authorship and
+co-author trailers were corrected across the history: every commit now
+reads Roshan Tariq as author and committer. Commit dates, messages apart
+from the trailers, and every file are unchanged. All 119 rewritten commits have
+the same tree as the commits they replace, checked one by one.
+
+85 commits from 28 October 2026 onward received new IDs; the 34 earlier
+ones kept theirs. `v1.0` moved from `6b0766c` to `ab97e5b`, the same tree.
+Every commit ID cited in this log, the other docs and both provenance
+ledgers (`results/tables/provenance.csv`, `results/figures/provenance.csv`)
+was replaced with its new ID: 33 distinct IDs, 116 occurrences, each
+checked to resolve in the new history. The full old-to-new table is
+`docs/commit-id-remap.csv`, for any reference held outside the repo.
+
+The ledger edit is a mechanical substitution between commits with
+identical trees, not an inference: each row still names the exact code
+that wrote its table. Commit IDs *inside* past trees, including `v1.0`'s,
+still name the old commits; the remap table resolves them.
 
 ---
 
@@ -3274,7 +3297,7 @@ from evidence, which the `note` column states:
 
 | evidence | tables |
 |---|---|
-| re-run 31 Oct 2026 at `b74fe8f`, clean tree, reproduced exactly (each also has a `recorded` row) | 36 |
+| re-run 31 Oct 2026 at `e223a34`, clean tree, reproduced exactly (each also has a `recorded` row) | 36 |
 | command quoted in the build log, a protocol, CLAUDE.md or the session record; not re-run (needs the index, GPU or API) | 22 |
 | no command on record: `unknown` | 19 |
 

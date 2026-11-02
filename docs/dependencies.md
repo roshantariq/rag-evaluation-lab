@@ -92,7 +92,7 @@ untested. `pip freeze` drops the index line and the markers, so re-add
 both after regenerating, as for `pywin32`.
 
 **Verified by a fresh install, 31 October 2026.** A clone of the
-committed branch (`2d9a2c6`), a new Python 3.11.9 venv, an empty pip
+committed branch (`4c60fb1`), a new Python 3.11.9 venv, an empty pip
 cache, `pip install -r requirements.lock.txt`: torch resolved from the
 cu128 index as `2.11.0+cu128`, `torch.cuda.is_available()` is True on the
 RTX 5070 Ti and a GPU matmul is correct, `pip check` is clean, `pip freeze`
